@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from usuarios.models import Usuario, Rol, UsuarioRol, Cliente
+from usuarios.serializers.user_serializer import ClienteSerializer, VeterinarioSerializer, PracticanteSerializer 
 
 # Jeronimo Rodriguez 10/30/2025 
 class RegistroSerializer(serializers.ModelSerializer):
@@ -79,3 +80,61 @@ class RegistroSerializer(serializers.ModelSerializer):
         )
         
         return usuario
+
+
+class UsuarioPerfilSerializer(serializers.ModelSerializer):
+    """
+    Serializer para ver/editar el perfil del usuario autenticado.
+
+    Este serializer centraliza la información del usuario que ha iniciado sesión,
+    incluyendo sus datos básicos, roles asignados y perfiles asociados
+    (Veterinario, Practicante o Cliente).
+
+    Características:
+    - Combina datos del modelo Usuario con datos relacionados en modelos de perfil.
+    - Usa SerializerMethodField para calcular campos dinámicos.
+    - Solo permite edición de campos limitados (controlado por `read_only_fields`).
+    """
+    
+    # Campos dinámicos obtenidos mediante métodos personalizados
+    roles = serializers.SerializerMethodField()
+    perfil_veterinario = serializers.SerializerMethodField()
+    perfil_practicante = serializers.SerializerMethodField()
+    perfil_cliente = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Usuario
+        fields = [
+            'id', 'username', 'email', 'nombre', 'apellido',
+            'estado', 'roles', 'created_at',
+            'perfil_veterinario', 'perfil_practicante', 'perfil_cliente'
+        ]
+        read_only_fields = ['id', 'username', 'created_at', 'estado']
+
+    """ 
+    --------------------------------------------
+    MÉTODOS PERSONALIZADOS
+    --------------------------------------------
+    """
+    
+    def get_roles(self, obj):
+        """Obtiene los roles del usuario."""
+        return [ur.rol.get_nombre_display() for ur in obj.usuario_roles.select_related('rol')]
+    
+    def get_perfil_veterinario(self, obj):
+        """Retorna el perfil de veterinario si existe."""
+        if hasattr(obj, 'perfil_veterinario'):
+            return VeterinarioSerializer(obj.perfil_veterinario).data
+        return None
+    
+    def get_perfil_practicante(self, obj):
+        """Retorna el perfil de practicante si existe."""
+        if hasattr(obj, 'perfil_practicante'):
+            return PracticanteSerializer(obj.perfil_practicante).data
+        return None
+    
+    def get_perfil_cliente(self, obj):
+        """Retorna el perfil de cliente si existe."""
+        if hasattr(obj, 'perfil_cliente'):
+            return ClienteSerializer(obj.perfil_cliente).data
+        return None
