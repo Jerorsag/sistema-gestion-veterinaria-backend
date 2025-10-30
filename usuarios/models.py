@@ -165,3 +165,31 @@ class Veterinario(models.Model):
     
     def __str__(self):
         return f"Dr(a). {self.usuario.get_full_name()}"
+
+
+class Practicante(models.Model):
+    """Perfil extendido para usuarios practicantes."""
+    
+    usuario = models.OneToOneField(
+        Usuario,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='perfil_practicante'
+    )
+    tutor_veterinario = models.ForeignKey(
+        Veterinario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='practicantes'
+    )
+    universidad = models.CharField('Universidad', max_length=200, blank=True)
+    periodo_practica = models.CharField('Período de práctica', max_length=100, blank=True)
+    
+    class Meta:
+        db_table = 'practicantes'
+        verbose_name = 'Practicante'
+        verbose_name_plural = 'Practicantes'
+    
+    def __str__(self):
+        return f"Practicante {self.usuario.get_full_name()}"
