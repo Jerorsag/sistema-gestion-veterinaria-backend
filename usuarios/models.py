@@ -68,7 +68,6 @@ class UsuarioPendiente(BaseModel):
     email = models.EmailField('Correo electrónico', unique=True)
     password = models.CharField('Contraseña', max_length=255)
     verification_code = models.CharField('Código de verificación', max_length=255)
-    created_at = models.DateTimeField('Fecha de creación', auto_now_add=True)
 
     def es_codigo_valido(self) -> bool:
         """
@@ -78,7 +77,7 @@ class UsuarioPendiente(BaseModel):
         duracion_validez_segundos = 20 * 60  # 20 minutos
         ahora = datetime.now(timezone.utc)
 
-        diferencia_tiempo = (ahora - self.fecha_creacion).total_seconds()
+        diferencia_tiempo = (ahora - self.created_at).total_seconds()
 
         return diferencia_tiempo <= duracion_validez_segundos
     
@@ -89,3 +88,57 @@ class UsuarioPendiente(BaseModel):
 
     def __str__(self):
         return f"Pendiente: {self.email}"
+    
+    
+# Jeronimo Rodriguez 10/30/2025
+# Creacion de Modelos-Tablas Rol-UsuarioRol   
+class Rol(models.Model):
+    """Modelo de roles del sistema."""
+    
+    ROLES_DISPONIBLES = [
+        ('administrador', 'Administrador'),
+        ('veterinario', 'Veterinario'),
+        ('practicante', 'Practicante'),
+        ('recepcionista', 'Recepcionista'),
+        ('cliente', 'Cliente'),
+    ]
+    
+    nombre = models.CharField(
+        'Nombre del rol',
+        max_length=50,
+        choices=ROLES_DISPONIBLES,
+        unique=True
+    )
+    descripcion = models.TextField('Descripción', blank=True)
+    
+    class Meta:
+        db_table = 'roles'
+        verbose_name = 'Rol'
+        verbose_name_plural = 'Roles'
+    
+    def __str__(self):
+        return self.get_nombre_display()
+    
+
+class UsuarioRol(models.Model):
+    """Tabla intermedia para la relación muchos a muchos entre Usuario y Rol."""
+    
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name='usuario_roles'
+    )
+    rol = models.ForeignKey(
+        Rol,
+        on_delete=models.CASCADE,
+        related_name='rol_usuarios'
+    )
+    
+    class Meta:
+        db_table = 'usuario_roles'
+        verbose_name = 'Usuario-Rol'
+        verbose_name_plural = 'Usuarios-Roles'
+        unique_together = ['usuario', 'rol']
+    
+    def __str__(self):
+        return f"{self.usuario.username} - {self.rol.nombre}"
