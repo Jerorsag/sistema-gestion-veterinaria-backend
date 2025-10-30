@@ -142,3 +142,26 @@ class UsuarioRol(models.Model):
     
     def __str__(self):
         return f"{self.usuario.username} - {self.rol.nombre}"
+    
+# Jeronimo Rodriguez 10/30/2025
+# Creacion de Modelo Veterinario
+class Veterinario(models.Model):
+    """Perfil extendido para usuarios veterinarios."""
+    
+    usuario = models.OneToOneField(
+        Usuario,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='perfil_veterinario'
+    )
+    licencia = models.CharField('Número de licencia', max_length=50, unique=True)
+    especialidad = models.CharField('Especialidad', max_length=100, blank=True)
+    horario = models.TextField('Horario de atención', blank=True)
+    
+    class Meta:
+        db_table = 'veterinarios'
+        verbose_name = 'Veterinario'
+        verbose_name_plural = 'Veterinarios'
+    
+    def __str__(self):
+        return f"Dr(a). {self.usuario.get_full_name()}"
