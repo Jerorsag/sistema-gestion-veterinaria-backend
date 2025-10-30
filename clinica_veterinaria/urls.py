@@ -15,8 +15,39 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.http import JsonResponse
+from django.urls import path, include
+
+def health(request):
+    """Endpoint de health check para monitoreo."""
+    return JsonResponse({
+        'status': 'ok',
+        'service': 'Sistema de Gestión Veterinaria',
+        'version': '1.0.0'
+    })
+
+def api_root(request):
+    """Endpoint raíz de la API con información básica."""
+    return JsonResponse({
+        'message': 'Bienvenido a la API del Sistema de Gestión Veterinaria',
+        'version': '1.0.0',
+        'endpoints': {
+            'health': request.build_absolute_uri('/api/health/')
+        }
+    })
 
 urlpatterns = [
+    # Admin
     path('admin/', admin.site.urls),
+
+    # API Root
+    path('api/', api_root, name='api_root'),
+    
+    # Health check
+    path('api/health/', health, name='health'),
 ]
+
+# Personalización del admin
+admin.site.site_header = "Sistema de Gestión Veterinaria"
+admin.site.site_title = "SGV Admin"
+admin.site.index_title = "Panel de Administración"
