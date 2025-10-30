@@ -32,6 +32,7 @@ def api_root(request):
         'message': 'Bienvenido a la API del Sistema de Gestión Veterinaria',
         'version': '1.0.0',
         'endpoints': {
+            'auth': request.build_absolute_uri('/api/v1/auth/'),
             'health': request.build_absolute_uri('/api/health/')
         }
     })
@@ -45,6 +46,9 @@ urlpatterns = [
     
     # Health check
     path('api/health/', health, name='health'),
+
+    # API v1
+    path('api/v1/', include('usuarios.urls')),
 ]
 
 # Personalización del admin
