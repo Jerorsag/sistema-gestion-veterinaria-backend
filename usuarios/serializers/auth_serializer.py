@@ -1,16 +1,23 @@
 from rest_framework import serializers
+from django.utils import timezone
 from usuarios.models import Usuario, Rol, UsuarioRol, Cliente
 from usuarios.serializers.user_serializer import ClienteSerializer, VeterinarioSerializer, PracticanteSerializer 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.exceptions import AuthenticationFailed
 
 # Jeronimo Rodriguez 10/31/2025 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Serializer personalizado para la autenticación JWT.
+
+    Este serializer amplía el comportamiento de `TokenObtainPairSerializer` 
+    de SimpleJWT para incluir validaciones de seguridad adicionales y 
+    proporcionar información personalizada del usuario dentro del token.
     
     - Extiende la funcionalidad del TokenObtainPairSerializer base de SimpleJWT.
     - Valida que el usuario esté activo y en estado 'activo' dentro del sistema.
-    - Incluye información adicional del usuario dentro del token (claims) 
+    - Implementa control de seguridad ante múltiples intentos fallidos.
+    - Incluye información adicional del usuario dentro del token (claims)
       y en la respuesta del login.
     """
     
@@ -18,12 +25,47 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         """
         Valida las credenciales del usuario y genera los tokens JWT.
 
-        Retorna:
-            dict: Contiene el par de tokens (access y refresh) más la información 
-            del usuario autenticado.
+        Flujo del proceso:
+        1. Verifica si el usuario existe.
+        2. Comprueba si está bloqueado temporalmente.
+        3. Intenta autenticar; si falla, incrementa los intentos y genera un mensaje dinámico.
+        4. Si la autenticación es exitosa, reinicia el contador de intentos.
+        5. Retorna los tokens (access y refresh) y los datos del usuario autenticado.
+
+        Args:
+            attrs (dict): Diccionario con las credenciales del usuario (`username`, `password`).
+
+        Raises:
+            serializers.ValidationError: Si el usuario está bloqueado o las credenciales son incorrectas.
+
+        Returns:
+            dict: Par de tokens JWT (`access`, `refresh`) junto con la información del usuario.
         """
-        # Lógica estándar de validación (verifica username y password)
-        data = super().validate(attrs)
+        
+        username = attrs.get("username")
+
+        # Buscar usuario para controlar intentos fallidos
+        try:
+            user = Usuario.objects.get(username=username)
+        except Usuario.DoesNotExist:
+            raise serializers.ValidationError("Usuario o contraseña incorrectos.")
+        
+        # Verificar si el usuario está temporalmente bloqueado
+        if user.esta_bloqueado():
+            minutos_restantes = int((user.bloqueado_hasta - timezone.now()).total_seconds() // 60)
+            raise serializers.ValidationError(
+                f"Cuenta bloqueada temporalmente. Intente nuevamente en {minutos_restantes} minutos."
+            )
+        
+        # Intentar autenticación normal
+        try:
+            data = super().validate(attrs)
+        except (serializers.ValidationError, AuthenticationFailed):
+            mensaje = user.registrar_intento_fallido()
+            raise serializers.ValidationError(mensaje)
+
+        # Si la autenticación fue exitosa, reiniciar los intentos fallidos
+        user.resetear_intentos()
         
         # Verificar si la cuenta está desactivada a nivel Django
         if not self.user.is_active:

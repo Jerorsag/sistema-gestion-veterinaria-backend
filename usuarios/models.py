@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.core.validators import RegexValidator
 from django.utils import timezone
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 from common.models import BaseModel
 
 from usuarios.manager import UserManager
@@ -13,7 +13,10 @@ from usuarios.manager import UserManager
 class Usuario(AbstractBaseUser, PermissionsMixin, BaseModel):
     """
     Modelo base de Usuario del sistema.
-    Extiende AbstractBaseUser para autenticación personalizada.
+
+    - Extiende AbstractBaseUser para autenticación personalizada.
+    - Gestiona autenticación y roles.
+    - Controla intentos fallidos y bloqueos temporales por seguridad.
     """
     
     ESTADOS = [
@@ -42,6 +45,10 @@ class Usuario(AbstractBaseUser, PermissionsMixin, BaseModel):
     is_staff = models.BooleanField('Es staff', default=False)
     is_active = models.BooleanField('Está activo', default=True)
 
+    # Campos adicionales para manejar seguridad de intentos de inicio de sesión.
+    intentos_fallidos = models.IntegerField(default=0)
+    bloqueado_hasta = models.DateTimeField(null=True, blank=True)
+
     objects = UserManager()
 
     USERNAME_FIELD = 'username'
@@ -59,6 +66,46 @@ class Usuario(AbstractBaseUser, PermissionsMixin, BaseModel):
     def get_full_name(self):
         """Retorna el nombre completo del usuario."""
         return f"{self.nombre} {self.apellido}"
+    
+    def esta_bloqueado(self):
+        """Verifica si el usuario está temporalmente bloqueado, debido a múltiples intentos fallidos de autenticación."""
+        if self.bloqueado_hasta and timezone.now() < self.bloqueado_hasta:
+            return True
+        return False
+
+    def registrar_intento_fallido(self, max_intentos=5, minutos_bloqueo=10):
+        """
+        Incrementa el contador de intentos fallidos y bloquea al usuario 
+        temporalmente si supera el número máximo permitido.
+
+        Args:
+            max_intentos (int): Cantidad máxima de intentos antes del bloqueo.
+            minutos_bloqueo (int): Duración del bloqueo temporal en minutos.
+
+        Returns:
+            str: Mensaje indicando el estado actual (intentos restantes o bloqueo activo).
+        """
+        self.intentos_fallidos += 1
+        if self.intentos_fallidos >= max_intentos:
+            self.bloqueado_hasta = timezone.now() + timedelta(minutes=minutos_bloqueo)
+            self.intentos_fallidos = 0  # reset después de bloquear
+            self.save()
+            return f"Cuenta bloqueada temporalmente por {minutos_bloqueo} minutos."
+
+        self.save()
+        intentos_restantes = max_intentos - self.intentos_fallidos
+        return f"Credenciales incorrectas. Intentos restantes: {intentos_restantes}"
+
+    def resetear_intentos(self):
+        """
+        Restablece los contadores de seguridad después de un inicio de sesión exitoso.
+
+        - Limpia el número de intentos fallidos.
+        - Elimina cualquier bloqueo temporal activo.
+        """
+        self.intentos_fallidos = 0
+        self.bloqueado_hasta = None
+        self.save()
     
 
 class UsuarioPendiente(BaseModel):
