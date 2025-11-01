@@ -120,3 +120,22 @@ def logout_view(request):
             {'detail': 'Token inválido o ya expirado.'},
             status=status.HTTP_400_BAD_REQUEST
         )
+    
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def verificar_token_view(request):
+    """
+    Endpoint para verificar si el token es válido.
+    Útil para el frontend para validar sesiones.
+    """
+    return Response({
+        'valid': True,
+        'user': {
+            'id': request.user.id,
+            'username': request.user.username,
+            'email': request.user.email,
+            'nombre_completo': request.user.get_full_name(),
+            'roles': [ur.rol.nombre for ur in request.user.usuario_roles.select_related('rol')],
+        }
+    }, status=status.HTTP_200_OK)
