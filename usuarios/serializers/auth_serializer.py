@@ -1,6 +1,70 @@
 from rest_framework import serializers
 from usuarios.models import Usuario, Rol, UsuarioRol, Cliente
 from usuarios.serializers.user_serializer import ClienteSerializer, VeterinarioSerializer, PracticanteSerializer 
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+# Jeronimo Rodriguez 10/31/2025 
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Serializer personalizado para la autenticación JWT.
+    
+    - Extiende la funcionalidad del TokenObtainPairSerializer base de SimpleJWT.
+    - Valida que el usuario esté activo y en estado 'activo' dentro del sistema.
+    - Incluye información adicional del usuario dentro del token (claims) 
+      y en la respuesta del login.
+    """
+    
+    def validate(self, attrs):
+        """
+        Valida las credenciales del usuario y genera los tokens JWT.
+
+        Retorna:
+            dict: Contiene el par de tokens (access y refresh) más la información 
+            del usuario autenticado.
+        """
+        # Lógica estándar de validación (verifica username y password)
+        data = super().validate(attrs)
+        
+        # Verificar si la cuenta está desactivada a nivel Django
+        if not self.user.is_active:
+            raise serializers.ValidationError(
+                'Esta cuenta está inactiva. Contacte al administrador.'
+            )
+        
+        # Verificar si el estado del usuario en el modelo no es "activo"
+        if self.user.estado != 'activo':
+            raise serializers.ValidationError(
+                f'Esta cuenta está en estado: {self.user.get_estado_display()}.'
+            )
+        
+        # Agregar información adicional del usuario a la respuesta
+        data['user'] = {
+            'id': self.user.id,
+            'username': self.user.username,
+            'email': self.user.email,
+            'nombre_completo': self.user.get_full_name(),
+            'roles': [ur.rol.nombre for ur in self.user.usuario_roles.select_related('rol')],
+        }
+        
+        return data
+    
+    @classmethod
+    def get_token(cls, user):
+        """
+        Sobrescribe la generación del token JWT para añadir 'claims' personalizados.
+        Estos datos pueden ser leídos directamente desde el payload del token.
+        """
+        token = super().get_token(user)
+        
+        # Claims personalizados del usuario
+        token['username'] = user.username
+        token['email'] = user.email
+        token['nombre'] = user.nombre
+        token['apellido'] = user.apellido
+        token['roles'] = [ur.rol.nombre for ur in user.usuario_roles.select_related('rol')]
+        
+        return token
+    
 
 # Jeronimo Rodriguez 10/30/2025 
 class RegistroSerializer(serializers.ModelSerializer):
