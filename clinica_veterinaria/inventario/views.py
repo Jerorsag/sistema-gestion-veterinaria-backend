@@ -15,6 +15,14 @@ class MarcaViewSet(viewsets.ModelViewSet):
             return Response({"mensaje": "duplicado"}, status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
 
+    def update(self, request, *args, **kwargs):
+
+        instancia = self.get_object()
+        nueva_desc = request.data.get("descripcion")
+        if nueva_desc and Marca.objects.filter(descripcion__iexact=nueva_desc).exclude(pk=instancia.pk).exists():
+            return Response({"mensaje": "duplicado"}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
     def get_queryset(self):
         buscador = self.request.query_params.get("buscador")
         if buscador:
@@ -32,6 +40,13 @@ class CategoriaViewSet(viewsets.ModelViewSet):
         if Categoria.objects.filter(descripcion__iexact=descripcion).exists():
             return Response({"mensaje": "duplicado"}, status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        instancia = self.get_object()
+        nueva_desc = request.data.get("descripcion")
+        if nueva_desc and Categoria.objects.filter(descripcion__iexact=nueva_desc).exclude(pk=instancia.pk).exists():
+            return Response({"mensaje": "duplicado"}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
 
     def get_queryset(self):
         buscador = self.request.query_params.get("buscador")
@@ -51,6 +66,14 @@ class ProductoViewSet(viewsets.ModelViewSet):
             return Response({"mensaje": "duplicado"}, status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
 
+    def update(self, request, *args, **kwargs):
+        instancia = self.get_object()
+        nueva_desc = request.data.get("descripcion")
+        if nueva_desc and Producto.objects.filter(descripcion__iexact=nueva_desc).exclude(pk=instancia.pk).exists():
+            return Response({"mensaje": "duplicado"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().update(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = Producto.objects.all()
         buscador = self.request.query_params.get("buscador")
@@ -61,7 +84,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(Q(descripcion__icontains=buscador))
 
         if categoria:
-            # Buscar por nombre o ID
+
             queryset = queryset.filter(
                 Q(categoria__descripcion__icontains=categoria) | Q(categoria__id__iexact=categoria)
             )
@@ -73,6 +96,8 @@ class ProductoViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+
+# ---- KARDEX ----
 class KardexViewSet(viewsets.ModelViewSet):
     serializer_class = KardexSerializer
     queryset = Kardex.objects.all().order_by('-fecha')
@@ -84,17 +109,9 @@ class KardexViewSet(viewsets.ModelViewSet):
         return Kardex.objects.all().order_by('-fecha')
 
     def destroy(self, request, *args, **kwargs):
-        #Cuando el usuario (desde Postman, API o frontend) hace DELETE, no se elimina físicamente el registro: se anula y se revierte el stock.
-
         instance = self.get_object()
-
-        # Guardamos una referencia antes de modificar el tipo
         tipo_original = instance.tipo
-
-        # Llamamos al delete() del modelo (que realiza la anulación lógica)
         instance.delete()
-
-        # Retornamos respuesta personalizada
         return Response(
             {
                 "mensaje": f"Movimiento {instance.id} ({tipo_original}) anulado correctamente.",
