@@ -39,8 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-
-'clinica_veterinaria.inventario'
+    'clinica_veterinaria.inventario',
+    'clinica_veterinaria.consultas',
 ]
 
 MIDDLEWARE = [
