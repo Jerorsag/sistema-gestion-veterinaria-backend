@@ -45,6 +45,11 @@ urlpatterns = [
     
     # Health check
     path('api/health/', health, name='health'),
+
+
+    path('api/', include('clinica_veterinaria.inventario.urls')),
+
+
 ]
 
 # Personalización del admin

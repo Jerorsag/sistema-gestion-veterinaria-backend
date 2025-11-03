@@ -1,0 +1,27 @@
+# --- Archivos de entorno ---
+.env
+
+# --- Entornos virtuales ---
+venv/
+env/
+
+# --- Archivos de compilación de Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Archivos temporales ---
+*.log
+*.pot
+*.py[cod]
+*$py.class
+
+# --- Archivos de configuración de IDEs ---
+.idea/
+.vscode/
+*.swp
+
+# --- Archivos del sistema ---
+.DS_Store
+Thumbs.db
