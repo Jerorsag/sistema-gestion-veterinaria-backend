@@ -1,15 +1,16 @@
-"""
-Módulo de Gestión de Consultas y Historias Clínicas
-Sara Sanchez
-02 Noviembre 2025
-"""
-
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
+from usuarios.models import Veterinario
+
+"""
+Módulo de Gestión de Consultas y Historias Clínicas
+Sara Sanchez
+02 Noviembre 2025
+"""
 
 User = get_user_model()
 
@@ -232,7 +233,7 @@ class Consulta(models.Model):
     """
 
     mascota = models.ForeignKey(
-        'consultas.MascotaMock',
+        'mascotas.Mascota',
         on_delete=models.CASCADE,
         related_name='consultas',
         verbose_name=_("Mascota"),
@@ -240,12 +241,11 @@ class Consulta(models.Model):
     )
 
     veterinario = models.ForeignKey(
-        User,
+        Veterinario,
         on_delete=models.SET_NULL,
         null=True,
         related_name='consultas_atendidas',
         verbose_name=_("Veterinario"),
-        limit_choices_to={'groups__name': 'Veterinario'},
         help_text=_("Veterinario que atiende la consulta")
     )
 
@@ -321,9 +321,9 @@ class HistoriaClinica(models.Model):
     """
 
     mascota = models.OneToOneField(
-        'consultas.MascotaMock',
+        'mascotas.Mascota',
         on_delete=models.CASCADE,
-        related_name='historia_clinica',
+        related_name='historias_consulta',
         verbose_name=_("Mascota"),
         help_text=_("Cada mascota tiene una única historia clínica.")
     )
