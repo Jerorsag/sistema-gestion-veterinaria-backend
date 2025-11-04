@@ -46,6 +46,8 @@ urlpatterns = [
     
     # Health check
     path('api/health/', health, name='health'),
+
+    path('inventario/', include('inventario.urls')),
 ]
 
 # Personalización del admin
