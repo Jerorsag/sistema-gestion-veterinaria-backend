@@ -8,7 +8,7 @@ class BaseModel(models.Model):
     Clase abstracta base para todos los modelos del sistema.
     Proporciona campos comunes de auditoría y un ID UUID único.
     """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.BigAutoField(primary_key=True)
     created_at = models.DateTimeField('Fecha de creación', default=timezone.now)
     updated_at = models.DateTimeField('Fecha de actualización', auto_now=True)
     deleted_at = models.DateTimeField('Fecha de eliminación', null=True, blank=True)
