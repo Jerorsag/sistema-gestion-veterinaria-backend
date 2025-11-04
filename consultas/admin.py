@@ -8,7 +8,6 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models_temp import MascotaMock
 from .models import (
     Consulta,
     HistoriaClinica,
@@ -64,12 +63,6 @@ class HistorialVacunaInline(admin.StackedInline):
     verbose_name_plural = "Estado de Vacunación"
 
 # ADMIN: CONSULTA (Principal)
-@admin.register(MascotaMock)
-class MascotaMockAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'especie', 'raza', 'edad')
-    search_fields = ('nombre',)
-    list_filter = ('especie',)
-
 @admin.register(Consulta)
 class ConsultaAdmin(admin.ModelAdmin):
     """
@@ -120,7 +113,7 @@ class ConsultaAdmin(admin.ModelAdmin):
     ]
 
     # Autocompletado para relaciones
-    autocomplete_fields = ['mascota', 'veterinario']
+    raw_id_fields = ['veterinario', 'mascota']
 
     # Organización de campos en el formulario
     fieldsets = (
