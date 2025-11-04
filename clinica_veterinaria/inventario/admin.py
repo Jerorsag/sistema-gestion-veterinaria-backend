@@ -59,13 +59,8 @@ class KardexAdmin(admin.ModelAdmin):
         obj.delete()
 
     def delete_queryset(self, request, queryset):
-        """
-        El admin por defecto usa queryset.delete() para eliminar en lote.
-        Esto no invocaría el método delete() del modelo, así que iteramos manualmente.
-        """
         for obj in queryset:
             obj.delete()
-
 
 #MARCA y CATEGORIA
 @admin.register(Marca)
