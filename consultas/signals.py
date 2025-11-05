@@ -4,7 +4,7 @@ Sara Sanchez
 03 Noviembre 2025
 """
 
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 from .models import Consulta, Prescripcion, HistoriaClinica
 from .services.historia_service import gestionar_historia_clinica
@@ -16,29 +16,60 @@ gestor_mementos = GestorMementos()
 @receiver(post_save, sender=Consulta)
 def crear_o_actualizar_historia(sender, instance, created, **kwargs):
     """
-    Al crear una consulta, crea o actualiza automáticamente
-    la historia clínica y el estado de vacunación.
+    Al crear una consulta, crea o actualiza automáticamente la historia clínica.
     """
     if created:
+        print(f"Nueva consulta creada: {instance.id}")
         gestionar_historia_clinica(instance)
 
 
 @receiver(post_save, sender=Prescripcion)
 def actualizar_inventario_post_save(sender, instance, created, **kwargs):
     """
-    Al crear una prescripción, descuenta stock y genera alerta si es necesario.
+    Descuenta del inventario cuando se crea una prescripción.
+    Evita duplicar la operación si se guarda dos veces.
     """
-    if created:
-        descontar_inventario(instance)
+    # Solo ejecutar si es una nueva prescripción
+    if not created:
+        return
+
+    # Evitar duplicados si ya se procesó
+    if hasattr(instance, "_stock_actualizado"):
+        return
+
+    try:
+        descontar_inventario(
+            producto=instance.medicamento,
+            cantidad=instance.cantidad,
+            detalle=f"Salida por prescripción (Consulta #{instance.consulta.id})"
+        )
+        # Marcar como procesado para evitar duplicados
+        instance._stock_actualizado = True
+        print(f"✓ Stock descontado correctamente para {instance.medicamento.descripcion}")
+    except Exception as e:
+        print(f"✗ Error al descontar stock: {e}")
+        raise  # Re-lanzar para que no se guarde la prescripción si falla
 
 
-@receiver(post_delete, sender=Prescripcion)
-def devolver_inventario_post_delete(sender, instance, **kwargs):
+@receiver(pre_delete, sender=Prescripcion)
+def restaurar_stock_al_eliminar_prescripcion(sender, instance, **kwargs):
     """
-    Al eliminar una prescripción, devuelve el stock al inventario.
+    Cuando se elimina una prescripción, se devuelve el stock al inventario.
     """
-    devolver_inventario(instance)
+    try:
+        devolver_inventario(
+            instance,
+            detalle=f"Devolución automática por eliminación de prescripción (Consulta #{instance.consulta.id})"
+        )
+        print(f"✓ Stock restaurado para {instance.medicamento.descripcion}")
+    except Exception as e:
+        print(f"✗ Error al restaurar stock: {e}")
+        raise
+
 
 @receiver(post_save, sender=HistoriaClinica)
 def guardar_version_historia(sender, instance, **kwargs):
+    """
+    Guarda una versión de la historia clínica usando el patrón Memento.
+    """
     gestor_mementos.guardar(instance)
