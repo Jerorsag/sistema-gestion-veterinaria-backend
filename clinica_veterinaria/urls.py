@@ -50,6 +50,8 @@ urlpatterns = [
     # API v1
     path('api/v1/', include('usuarios.urls')),
     path('api/v1/', include('mascotas.urls')),
+    path('api/v1/', include('consultas.urls')),
+    path('api/v1', include('inventario.urls')),
 ]
 
 # Personalización del admin
