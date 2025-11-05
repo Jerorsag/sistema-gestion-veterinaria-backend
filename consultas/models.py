@@ -142,7 +142,7 @@ class Prescripcion(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.medicamento.nombre} - Cantidad: {self.cantidad}"
+        return f"{self.medicamento.descripcion} - Cantidad: {self.cantidad}"
 
     def clean(self):
         """
@@ -310,6 +310,20 @@ class Consulta(models.Model):
                 'diagnostico': _("Debe ingresar un diagnóstico")
             })
 
+    def get_prescripciones_count(self):
+        """Devuelve el número de prescripciones asociadas a esta consulta"""
+        return self.prescripciones.count()
+
+    def get_examenes_count(self):
+        """Devuelve el número de exámenes asociados a esta consulta"""
+        return self.examenes.count()
+
+    def get_estado_vacunacion_consulta(self):
+        """Obtiene el estado de vacunación registrado en la consulta"""
+        historial = self.vacunas.last()
+        if historial:
+            return historial.get_estado_display()
+        return "No registrado"
 
 # --------------------------------------------------------------------------------
 # HISTORIA CLÍNICA
@@ -357,3 +371,9 @@ class HistoriaClinica(models.Model):
 
     def __str__(self):
         return f"Historia Clínica - {self.mascota.nombre}"
+
+    def get_total_consultas(self):
+        """
+        Retorna el total de consultas asociadas a la mascota de esta historia clínica.
+        """
+        return self.mascota.consultas.count()

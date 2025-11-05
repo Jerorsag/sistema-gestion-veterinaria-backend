@@ -113,31 +113,24 @@ class ConsultaAdmin(admin.ModelAdmin):
     ]
 
     # Autocompletado para relaciones
-    raw_id_fields = ['veterinario', 'mascota']
+    autocomplete_fields = ['veterinario', 'mascota']
 
     # Organización de campos en el formulario
     fieldsets = (
-        ('📋 Información General', {
+        ('Información General', {
             'fields': (
                 'mascota',
                 'veterinario',
                 'fecha_consulta',
             )
         }),
-        ('🩺 Datos de la Consulta', {
+        ('Datos de la Consulta', {
             'fields': (
                 'datos_personales_display',
                 'descripcion_consulta',
                 'diagnostico',
                 'notas_adicionales',
             )
-        }),
-        ('📊 Información Adicional', {
-            'fields': (
-                'total_prescripciones_display',
-                'total_examenes_display',
-            ),
-            'classes': ('collapse',),  # Sección colapsable
         }),
         ('🕐 Auditoría', {
             'fields': (
@@ -147,7 +140,6 @@ class ConsultaAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
     )
-
     # Inlines (modelos anidados)
     inlines = [
         HistorialVacunaInline,
@@ -160,16 +152,17 @@ class ConsultaAdmin(admin.ModelAdmin):
 
     @admin.display(description='Mascota', ordering='mascota__nombre')
     def mascota_link(self, obj):
-        """Muestra el nombre de la mascota como link"""
+        """Muestra el nombre de la mascota """
         url = reverse('admin:mascotas_mascota_change', args=[obj.mascota.id])
         return format_html('<a href="{}">{}</a>', url, obj.mascota.nombre)
 
     @admin.display(description='Veterinario', ordering='veterinario__first_name')
     def veterinario_link(self, obj):
-        """Muestra el veterinario como link"""
-        if obj.veterinario:
-            url = reverse('admin:auth_user_change', args=[obj.veterinario.id])
-            return format_html('<a href="{}">{}</a>', url, obj.veterinario.get_full_name())
+        """Muestra el veterinario"""
+        if obj.veterinario and hasattr(obj.veterinario, 'user'):
+            url = reverse('admin:auth_user_change', args=[obj.veterinario.user.id])
+            nombre = obj.veterinario.user.get_full_name() or obj.veterinario.user.username
+            return format_html('<a href="{}">{}</a>', url, nombre)
         return '-'
 
     @admin.display(description='Diagnóstico')
@@ -184,20 +177,12 @@ class ConsultaAdmin(admin.ModelAdmin):
         """Muestra los datos personales de la mascota en formato HTML"""
         datos = obj.get_datos_personales()
         return format_html(
-            '<div style="line-height: 1.6;">'
-            '<strong>Mascota:</strong> {}<br>'
-            '<strong>Propietario:</strong> {}<br>'
-            '<strong>Edad:</strong> {}<br>'
-            '<strong>Especie:</strong> {}<br>'
-            '<strong>Raza:</strong> {}<br>'
-            '<strong>Estado Vacunación:</strong> {}'
-            '</div>',
-            datos['nombre_mascota'],
-            datos['nombre_propietario'],
-            datos['edad'],
-            datos['tipo_especie'],
-            datos['raza'],
-            datos['estado_vacunacion']
+            f"Mascota: {datos['nombre_mascota']}\n"
+            f"Propietario: {datos['nombre_propietario']}\n"
+            f"Edad: {datos['edad']}\n"
+            f"Especie: {datos['tipo_especie']}\n"
+            f"Raza: {datos['raza']}\n"
+            f"Estado Vacunación: {datos['estado_vacunacion']}"
         )
 
     @admin.display(description='Prescripciones')
@@ -205,43 +190,22 @@ class ConsultaAdmin(admin.ModelAdmin):
         """Muestra el total de prescripciones"""
         total = obj.get_prescripciones_count()
         if total > 0:
-            return format_html(
-                '<span style="color: green; font-weight: bold;">✓ {} medicamento(s)</span>',
-                total
-            )
-        return format_html('<span style="color: gray;">Sin prescripciones</span>')
+            return f"{total} medicamentos"
+        return "Sin prescripciones"
 
     @admin.display(description='Exámenes')
     def total_examenes_display(self, obj):
         """Muestra el total de exámenes"""
         total = obj.get_examenes_count()
         if total > 0:
-            return format_html(
-                '<span style="color: blue; font-weight: bold;">✓ {} examen(es)</span>',
-                total
-            )
-        return format_html('<span style="color: gray;">Sin exámenes</span>')
+            return f"{total} medicamentos"
+        return "Sin examenes"
 
     @admin.display(description='Vacunación')
     def estado_vacunacion_display(self, obj):
         """Muestra el estado de vacunación con color"""
         estado = obj.get_estado_vacunacion_consulta()
-
-        colores = {
-            'Al día': 'green',
-            'Pendiente': 'orange',
-            'En proceso': 'blue',
-            'Ninguna': 'red',
-            'No registrado': 'gray'
-        }
-
-        color = colores.get(estado, 'gray')
-
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">⚫ {}</span>',
-            color,
-            estado
-        )
+        return estado or "No registrado"
 
     actions = ['exportar_consultas']
 
@@ -251,7 +215,6 @@ class ConsultaAdmin(admin.ModelAdmin):
 class HistoriaClinicaAdmin(admin.ModelAdmin):
     """
     Administración de Historias Clínicas consolidadas.
-    Vista de solo lectura ya que se crea/actualiza automáticamente.
     """
 
     list_display = [
@@ -271,8 +234,8 @@ class HistoriaClinicaAdmin(admin.ModelAdmin):
 
     search_fields = [
         'mascota__nombre',
-        'mascota__propietario__first_name',
-        'mascota__propietario__last_name',
+        'mascota__cliente__usuario__nombre',
+        'mascota__cliente__usuario__apellido',
     ]
 
     date_hierarchy = 'fecha_actualizacion'
@@ -290,24 +253,18 @@ class HistoriaClinicaAdmin(admin.ModelAdmin):
     ]
 
     fieldsets = (
-        ('🐾 Mascota', {
+        ('Mascota', {
             'fields': (
                 'mascota',
                 'total_consultas_display',
             )
         }),
-        ('💉 Vacunación', {
+        ('Vacunación', {
             'fields': (
                 'estado_vacunacion_actual',
             )
         }),
-        ('📊 Estadísticas', {
-            'fields': (
-                'ultima_consulta_display',
-                'medicamentos_frecuentes_display',
-            )
-        }),
-        ('🕐 Fechas', {
+        ('Fechas', {
             'fields': (
                 'fecha_creacion',
                 'fecha_actualizacion',
@@ -331,16 +288,22 @@ class HistoriaClinicaAdmin(admin.ModelAdmin):
 
     @admin.display(description='Propietario')
     def propietario_display(self, obj):
-        """Muestra el propietario"""
-        return obj.mascota.propietario.get_full_name()
+        return obj.mascota.cliente.get_full_name() if hasattr(obj.mascota.cliente, 'get_full_name') else str(
+            obj.mascota.cliente)
 
     @admin.display(description='Total Consultas')
     def total_consultas_display(self, obj):
-        """Muestra el total de consultas"""
+        """Muestra el total de consultas como un enlace al listado filtrado."""
         total = obj.get_total_consultas()
+
+        # URL del admin de consultas filtrada por mascota
+        url = reverse('admin:consultas_consulta_changelist') + f'?mascota__id__exact={obj.mascota.id}'
+
         return format_html(
-            '<span style="background-color: #e3f2fd; padding: 5px 10px; border-radius: 3px;">'
-            '<strong>{}</strong> consulta(s)</span>',
+            '<a href="{}" style="background-color: #ffff; padding: 5px 10px; border-radius: 3px; '
+            'text-decoration: none; color: #000;">'
+            '<strong>{}</strong> consulta(s)</a>',
+            url,
             total
         )
 
@@ -349,21 +312,7 @@ class HistoriaClinicaAdmin(admin.ModelAdmin):
         """Badge con color según estado"""
         estado = obj.get_estado_vacunacion_actual_display()
 
-        colores = {
-            'Al día': '#4caf50',
-            'Pendiente': '#ff9800',
-            'En proceso': '#2196f3',
-            'Ninguna': '#f44336'
-        }
-
-        color = colores.get(estado, '#9e9e9e')
-
-        return format_html(
-            '<span style="background-color: {}; color: white; padding: 5px 10px; '
-            'border-radius: 12px; font-weight: bold;">{}</span>',
-            color,
-            estado
-        )
+        return f"{estado}"
 
     @admin.display(description='Última Consulta')
     def ultima_consulta_display(self, obj):
@@ -380,14 +329,13 @@ class HistoriaClinicaAdmin(admin.ModelAdmin):
 
     @admin.display(description='Medicamentos Frecuentes')
     def medicamentos_frecuentes_display(self, obj):
-        """Lista de medicamentos más prescritos"""
+        """Lista de medicamentos más prescritos en texto plano"""
         medicamentos = obj.get_medicamentos_frecuentes(limit=3)
         if medicamentos:
-            html = '<ul style="margin: 0; padding-left: 20px;">'
-            for med in medicamentos:
-                html += f"<li>{med['medicamento__nombre']} ({med['cantidad_prescripciones']}x)</li>"
-            html += '</ul>'
-            return format_html(html)
+            # Creamos una lista de strings "Nombre (cantidadx)"
+            lista_meds = [f"{med['medicamento__nombre']} ({med['cantidad_prescripciones']}x)" for med in medicamentos]
+            # Unimos todo con comas
+            return ", ".join(lista_meds)
         return 'Sin prescripciones'
 
 # ADMIN: PRESCRIPCIÓN
@@ -397,7 +345,6 @@ class PrescripcionAdmin(admin.ModelAdmin):
     """
     Administración de Prescripciones.
     """
-
     list_display = [
         'id',
         'consulta_link',
@@ -415,7 +362,7 @@ class PrescripcionAdmin(admin.ModelAdmin):
 
     search_fields = [
         'consulta__mascota__nombre',
-        'medicamento__nombre',
+        'medicamento__descripcion',
         'indicaciones',
     ]
 
@@ -428,10 +375,10 @@ class PrescripcionAdmin(admin.ModelAdmin):
     autocomplete_fields = ['consulta', 'medicamento']
 
     fieldsets = (
-        ('📋 Consulta', {
+        ('Consulta', {
             'fields': ('consulta',)
         }),
-        ('💊 Medicamento', {
+        ('Medicamento', {
             'fields': (
                 'medicamento',
                 'cantidad',
@@ -439,11 +386,12 @@ class PrescripcionAdmin(admin.ModelAdmin):
                 'indicaciones',
             )
         }),
-        ('🕐 Fecha', {
+        ('Fecha', {
             'fields': ('fecha_prescripcion',),
             'classes': ('collapse',),
         }),
     )
+
 
     @admin.display(description='Consulta')
     def consulta_link(self, obj):
@@ -464,28 +412,25 @@ class PrescripcionAdmin(admin.ModelAdmin):
     def medicamento_link(self, obj):
         """Link al medicamento"""
         url = reverse('admin:inventario_producto_change', args=[obj.medicamento.id])
-        return format_html('<a href="{}">{}</a>', url, obj.medicamento.nombre)
+        return format_html('<a href="{}">{}</a>', url, obj.medicamento.descripcion)
 
     @admin.display(description='Stock Disponible')
     def stock_disponible_display(self, obj):
         """Muestra stock con color"""
-        stock = obj.medicamento.cantidad_disponible
+        stock = obj.medicamento.stock
 
         if stock <= obj.medicamento.stock_minimo:
             color = 'red'
-            icono = '⚠️'
         elif stock <= obj.medicamento.stock_minimo * 2:
             color = 'orange'
-            icono = '⚡'
         else:
             color = 'green'
-            icono = '✓'
 
         return format_html(
             '<span style="color: {}; font-weight: bold;">{} {} unidades</span>',
             color,
-            icono,
-            stock
+            stock,
+            obj.medicamento.descripcion
         )
 
 # ADMIN: EXAMEN
@@ -513,6 +458,7 @@ class ExamenAdmin(admin.ModelAdmin):
     search_fields = [
         'consulta__mascota__nombre',
         'descripcion',
+        'tipo_examen',
     ]
 
     date_hierarchy = 'fecha_orden'
@@ -524,16 +470,16 @@ class ExamenAdmin(admin.ModelAdmin):
     autocomplete_fields = ['consulta']
 
     fieldsets = (
-        ('📋 Consulta', {
+        ('Consulta', {
             'fields': ('consulta',)
         }),
-        ('🔬 Examen', {
+        ('Examen', {
             'fields': (
                 'tipo_examen',
                 'descripcion',
             )
         }),
-        ('🕐 Fecha', {
+        ('Fecha', {
             'fields': ('fecha_orden',),
             'classes': ('collapse',),
         }),
@@ -553,11 +499,7 @@ class ExamenAdmin(admin.ModelAdmin):
     @admin.display(description='Tipo de Examen')
     def tipo_examen_badge(self, obj):
         """Badge del tipo de examen"""
-        return format_html(
-            '<span style="background-color: #2196f3; color: white; '
-            'padding: 5px 10px; border-radius: 3px;">{}</span>',
-            obj.get_tipo_examen_display()
-        )
+        return obj.get_tipo_examen_display()
 
     @admin.display(description='Descripción')
     def descripcion_corta(self, obj):
@@ -604,16 +546,16 @@ class HistorialVacunaAdmin(admin.ModelAdmin):
     autocomplete_fields = ['consulta']
 
     fieldsets = (
-        ('📋 Consulta', {
+        ('Consulta', {
             'fields': ('consulta',)
         }),
-        ('💉 Vacunación', {
+        ('Vacunación', {
             'fields': (
                 'estado',
                 'vacunas_descripcion',
             )
         }),
-        ('🕐 Fecha', {
+        ('Fecha', {
             'fields': ('fecha_registro',),
             'classes': ('collapse',),
         }),
@@ -635,21 +577,8 @@ class HistorialVacunaAdmin(admin.ModelAdmin):
         """Badge con color según estado"""
         estado = obj.get_estado_display()
 
-        colores = {
-            'Al día': '#4caf50',
-            'Pendiente': '#ff9800',
-            'En proceso': '#2196f3',
-            'Ninguna': '#f44336'
-        }
 
-        color = colores.get(estado, '#9e9e9e')
-
-        return format_html(
-            '<span style="background-color: {}; color: white; '
-            'padding: 5px 10px; border-radius: 12px; font-weight: bold;">{}</span>',
-            color,
-            estado
-        )
+        return estado
 
     @admin.display(description='Vacunas')
     def vacunas_descripcion_corta(self, obj):
