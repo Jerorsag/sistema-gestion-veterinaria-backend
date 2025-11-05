@@ -8,7 +8,7 @@ Implementa el COMPOSITE PATTERN:
 
 from rest_framework import serializers
 from consultas.models import HistoriaClinica
-from apps.mascotas.models import Mascota
+from mascotas.models import Mascota
 from .consulta_serializers import ConsultaDetailSerializer
 
 

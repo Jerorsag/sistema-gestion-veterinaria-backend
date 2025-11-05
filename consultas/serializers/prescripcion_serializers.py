@@ -33,7 +33,7 @@ class PrescripcionSerializer(serializers.ModelSerializer):
     """
 
     producto_nombre = serializers.CharField(
-        source='medicamento.nombre',
+        source='medicamento.descripcion',
         read_only=True
     )
 
@@ -43,7 +43,7 @@ class PrescripcionSerializer(serializers.ModelSerializer):
     )
 
     stock_disponible = serializers.IntegerField(
-        source='medicamento.cantidad_disponible',
+        source='medicamento.stock',
         read_only=True
     )
 
@@ -69,12 +69,12 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
     """
 
     producto_nombre = serializers.CharField(
-        source='medicamento.nombre',
+        source='medicamento.descripcion',
         read_only=True
     )
 
     stock_disponible = serializers.IntegerField(
-        source='medicamento.cantidad_disponible',
+        source='medicamento.stock',
         read_only=True
     )
 

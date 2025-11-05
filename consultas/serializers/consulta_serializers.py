@@ -8,7 +8,7 @@ Representa el formulario completo "Crear Historias Clínicas".
 
 from rest_framework import serializers
 from consultas.models import Consulta, Prescripcion, Examen, HistorialVacuna
-from apps.mascotas.models import Mascota
+from mascotas.models import Mascota
 from django.contrib.auth import get_user_model
 
 from .prescripcion_serializers import (
