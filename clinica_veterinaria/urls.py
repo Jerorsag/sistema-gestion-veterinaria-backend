@@ -51,6 +51,7 @@ urlpatterns = [
     path('api/v1/', include('usuarios.urls')),
     path('api/v1/', include('mascotas.urls')),
     path('inventario/', include('inventario.urls')),
+    path('', include('citas.urls')),
 ]
 
 # Personalización del admin
