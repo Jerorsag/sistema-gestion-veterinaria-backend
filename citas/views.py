@@ -152,8 +152,8 @@ class CitaViewSet(viewsets.ModelViewSet):
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
-class ServicioViewSet(viewsets.ReadOnlyModelViewSet):
-    """ Endpoint de solo lectura para listar los servicios."""
+class ServicioViewSet(viewsets.ModelViewSet):
+    """ Endpoint"""
     queryset = Servicio.objects.all()
     serializer_class = serializers.ServicioSerializer # Usa el serializer de lectura
     permission_classes = [IsAuthenticated]
