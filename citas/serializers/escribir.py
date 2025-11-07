@@ -29,19 +29,6 @@ class CrearCitaSerializer(serializers.Serializer):
     def create(self, validated_data):
         """Llama al servicio para crear la cita."""
         usuario = self.context['request'].user
-
-        # 1. Sacamos el objeto datetime del diccionario
-        fecha_dt = validated_data.pop('fecha_hora') 
-        
-        # 2. La convertimos de vuelta a "texto" (string)
-        fecha_str = fecha_dt.isoformat()
-        
-        # 3. Nos aseguramos que el texto termine en 'Z' (formato UTC)
-        if fecha_dt.tzinfo == timezone.utc:
-             fecha_str = fecha_str.replace('+00:00', 'Z')
-        
-        # 4. Volvemos a meterla al diccionario, pero ahora como "texto"
-        validated_data['fecha_hora'] = fecha_str
         
         try:
             return agendar_nueva_cita(data=validated_data, usuario=usuario)
