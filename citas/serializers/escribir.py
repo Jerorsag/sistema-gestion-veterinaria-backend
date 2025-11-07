@@ -15,9 +15,9 @@ class CrearCitaSerializer(serializers.Serializer):
     Serializer para CREAR (POST) una Cita.
     Valida y llama al servicio agendar_nueva_cita.
     """
-    mascota_id = serializers.UUIDField(required=True)
-    veterinario_id = serializers.UUIDField(required=True)
-    servicio_id = serializers.UUIDField(required=True)
+    mascota_id = serializers.IntegerField(required=True)
+    veterinario_id = serializers.IntegerField(required=True)
+    servicio_id = serializers.IntegerField(required=True)
     fecha_hora = serializers.DateTimeField(required=True)
     observaciones = serializers.CharField(required=False, allow_blank=True, default='')
 
