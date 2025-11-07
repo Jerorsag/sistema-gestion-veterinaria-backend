@@ -12,53 +12,67 @@ from mascotas.models import Mascota
 def agendar_nueva_cita(data: dict, usuario: Usuario) -> Cita:
     """
     Servicio (Patrón Command) para crear una nueva cita (RF-004).
-    se encarga de Orquestar la validación, creación 
-    y notificación de una nueva cita.
+    Se encarga de orquestar la validación, creación y notificación de una nueva cita.
     """
     mascota_id = data.get('mascota_id')
     veterinario_id = data.get('veterinario_id')
     servicio_id = data.get('servicio_id')
-    fecha_hora_str = data.get('fecha_hora')
+    fecha_hora_input = data.get('fecha_hora')
 
-    # --- 1. Validación de Lógica de Negocio ---
+    # --- Manejo robusto de fecha y hora ---
+    fecha_hora = None
+
+    if isinstance(fecha_hora_input, str):
+        # Si viene como string (desde JSON)
+        fecha_str = fecha_hora_input.rstrip("Z")
+        try:
+            fecha_hora = datetime.fromisoformat(fecha_str)
+        except ValueError:
+            raise ValidationError("Formato de fecha inválido. Usa: YYYY-MM-DDThh:mm:ssZ")
+
+        if timezone.is_naive(fecha_hora):  # sin zona horaria
+            fecha_hora = timezone.make_aware(fecha_hora)
+
+    elif isinstance(fecha_hora_input, datetime):
+        # Si ya viene como datetime (DRF lo parseó)
+        fecha_hora = fecha_hora_input if timezone.is_aware(fecha_hora_input) else timezone.make_aware(fecha_hora_input)
+
+    else:
+        raise ValidationError("El campo 'fecha_hora' tiene un tipo no válido.")
+
+    # --- Validación de lógica de negocio ---
     try:
         mascota = Mascota.objects.get(id=mascota_id)
-         # Usamos el modelo Usuario porque veterinario es un Usuario con un rol específico
-        veterinario = Usuario.objects.get(id=veterinario_id) 
+        veterinario = Usuario.objects.get(id=veterinario_id)
         servicio = Servicio.objects.get(id=servicio_id)
     except (Mascota.DoesNotExist, Usuario.DoesNotExist, Servicio.DoesNotExist):
         raise ValidationError("La mascota, veterinario o servicio no existen.")
-    
-    # Verificación de permisos: El cliente solo puede agendar para sus mascotas
-    # Verificamos si el usuario tiene el rol 'cliente'
 
+    # --- Permisos ---
     if 'cliente' in [r.rol.nombre for r in usuario.usuario_roles.all()]:
-        # Si es cliente, verificamos que la mascota le pertenezca
         if mascota.cliente.usuario != usuario:
             raise PermissionDenied("No tienes permiso para agendar citas para esta mascota.")
-        
 
-    # Validación de Disponibilidad (CP-021)
-    # Convertimos el texto de la fecha (ej. "2025-11-20T14:00:00Z") a un objeto datetime
-    fecha_hora = timezone.make_aware(datetime.fromisoformat(fecha_hora_str.rstrip("Z")))
+    # --- Validación de fecha ---
+    if fecha_hora < timezone.now():
+        raise ValidationError("No se pueden agendar citas en el pasado.")
 
-    # ¡REUTILIZAMOS el servicio de disponibilidad!
+    # --- Verificar disponibilidad ---
     horarios_libres = obtener_horarios_disponibles(veterinario.id, fecha_hora.date())
-
     if fecha_hora.strftime("%H:%M") not in horarios_libres:
-        raise ValidationError("Conflicto de Horario: El veterinario no está disponible a esta hora.")
+        raise ValidationError("El veterinario no está disponible a esta hora.")
 
-    # --- 2. Ejecución (Creación) ---
+    # --- Crear la cita ---
     cita = Cita.objects.create(
         mascota=mascota,
         veterinario=veterinario,
         servicio=servicio,
         fecha_hora=fecha_hora,
         observaciones=data.get('observaciones', ''),
-       estado=EstadoCita.AGENDADA
+        estado=EstadoCita.AGENDADA
     )
 
-    # --- 3. Post-Acción (Llamada al servicio de notificación) ---
+    # --- Notificar ---
     notificar_observadores(evento="CITA_CREADA", cita=cita)
 
     return cita
