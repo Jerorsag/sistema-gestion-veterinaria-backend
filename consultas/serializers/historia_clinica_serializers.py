@@ -2,11 +2,12 @@
 
 """
 Serializers para el modelo HistoriaClinica.
-Implementa el COMPOSITE PATTERN:
-
+Implementa el COMPOSITE PATTERN.
 """
 
 from rest_framework import serializers
+from django.db.models import Count
+# IMPORTANTE: Usar el modelo de consultas, NO de mascotas
 from consultas.models import HistoriaClinica
 from mascotas.models import Mascota
 from .consulta_serializers import ConsultaDetailSerializer
@@ -15,12 +16,10 @@ from .consulta_serializers import ConsultaDetailSerializer
 class HistoriaClinicaSerializer(serializers.ModelSerializer):
     """
     Serializer básico para Historia Clínica.
-    Usado en listas y vistas generales.
     """
-
-    mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
+    mascota = serializers.SerializerMethodField()
     propietario_nombre = serializers.CharField(
-        source='mascota.propietario.get_full_name',
+        source='mascota.cliente.usuario.get_full_name',
         read_only=True
     )
     estado_vacunacion_display = serializers.CharField(
@@ -35,7 +34,6 @@ class HistoriaClinicaSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'mascota',
-            'mascota_nombre',
             'propietario_nombre',
             'fecha_creacion',
             'fecha_actualizacion',
@@ -46,13 +44,23 @@ class HistoriaClinicaSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'fecha_creacion', 'fecha_actualizacion']
 
+    def get_mascota(self, obj):
+        """Retorna datos básicos de la mascota como objeto"""
+        mascota = obj.mascota
+        return {
+            'id': str(mascota.id),
+            'nombre': mascota.nombre,
+            'especie': mascota.especie.nombre if mascota.especie else None,
+            'raza': mascota.raza.nombre if mascota.raza else None,
+        }
+
     def get_total_consultas(self, obj):
         """Retorna el número total de consultas"""
         return obj.get_total_consultas()
 
     def get_ultima_consulta_fecha(self, obj):
         """Retorna la fecha de la última consulta"""
-        ultima = obj.get_ultima_consulta()
+        ultima = obj.mascota.consultas.order_by('-fecha_consulta').first()
         return ultima.fecha_consulta if ultima else None
 
 
@@ -60,7 +68,6 @@ class HistoriaClinicaDetalleSerializer(serializers.ModelSerializer):
     """
     Serializer detallado para Historia Clínica consolidada.
     """
-
     # Datos de la mascota (Composite root)
     mascota_datos = serializers.SerializerMethodField(
         help_text="Datos completos de la mascota"
@@ -107,45 +114,67 @@ class HistoriaClinicaDetalleSerializer(serializers.ModelSerializer):
         Retorna datos completos de la mascota.
         """
         mascota = obj.mascota
+
+        # Calcular edad si tiene fecha de nacimiento
+        edad = None
+        if mascota.fecha_nacimiento:
+            from datetime import date
+            today = date.today()
+            edad = today.year - mascota.fecha_nacimiento.year
+            if today.month < mascota.fecha_nacimiento.month or \
+                    (today.month == mascota.fecha_nacimiento.month and today.day < mascota.fecha_nacimiento.day):
+                edad -= 1
+
         return {
-            'id': mascota.id,
+            'id': str(mascota.id),
             'nombre': mascota.nombre,
-            'edad': mascota.calcular_edad(),
-            'especie': mascota.especie,
+            'edad': edad,
+            'especie': mascota.especie.nombre if mascota.especie else None,
             'raza': mascota.raza.nombre if mascota.raza else "No especificada",
-            'sexo': mascota.get_sexo_display() if hasattr(mascota, 'sexo') else None,
+            'sexo': mascota.get_sexo_display(),
             'fecha_nacimiento': mascota.fecha_nacimiento,
+            'peso': float(mascota.peso) if mascota.peso else None,
         }
 
     def get_propietario(self, obj):
         """
         Retorna datos del propietario.
         """
-        propietario = obj.mascota.propietario
+        cliente = obj.mascota.cliente
+        usuario = cliente.usuario
+
         return {
-            'id': propietario.id,
-            'nombre_completo': propietario.get_full_name(),
-            'email': propietario.email,
-            'telefono': getattr(propietario, 'telefono', None),
+            'usuario_id': str(usuario.id),
+            'nombre_completo': usuario.get_full_name(),
+            'email': usuario.email,
+            'telefono': getattr(cliente, 'telefono', None),
         }
 
     def get_consultas(self, obj):
         """
         Retorna todas las consultas con sus relaciones.
         """
-        consultas = obj.get_consultas_ordenadas()
+        # Ordenar por fecha descendente (más recientes primero)
+        consultas = obj.mascota.consultas.all().order_by('-fecha_consulta')
         return ConsultaDetailSerializer(consultas, many=True, context=self.context).data
 
     def get_estadisticas(self, obj):
         """
         Retorna estadísticas generales de la historia clínica.
         """
-        ultima_consulta = obj.get_ultima_consulta()
-        primera_consulta = obj.mascota.consultas.order_by('fecha_consulta').first()
+        consultas = obj.mascota.consultas.all()
+        primera_consulta = consultas.order_by('fecha_consulta').first()
+        ultima_consulta = consultas.order_by('-fecha_consulta').first()
+
+        # Contar prescripciones totales
+        total_prescripciones = 0
+        for consulta in consultas:
+            if hasattr(consulta, 'prescripciones'):
+                total_prescripciones += consulta.prescripciones.count()
 
         return {
             'total_consultas': obj.get_total_consultas(),
-            'total_prescripciones': obj.get_total_prescripciones(),
+            'total_prescripciones': total_prescripciones,
             'primera_consulta': primera_consulta.fecha_consulta if primera_consulta else None,
             'ultima_consulta': ultima_consulta.fecha_consulta if ultima_consulta else None,
         }
@@ -154,7 +183,28 @@ class HistoriaClinicaDetalleSerializer(serializers.ModelSerializer):
         """
         Retorna los 5 medicamentos más prescritos en la historia de esta mascota.
         """
-        return list(obj.get_medicamentos_frecuentes(limit=5))
+        try:
+            from consultas.models import Prescripcion
+
+            # Obtener todas las prescripciones de las consultas de esta mascota
+            medicamentos = Prescripcion.objects.filter(
+                consulta__mascota=obj.mascota
+            ).values(
+                'medicamento__descripcion'
+            ).annotate(
+                veces_prescrito=Count('id')
+            ).order_by('-veces_prescrito')[:5]
+
+            return [
+                {
+                    'medicamento': med['medicamento__descripcion'],
+                    'veces_prescrito': med['veces_prescrito']
+                }
+                for med in medicamentos
+            ]
+        except Exception:
+            # Si no existe el modelo Prescripcion o hay algún error
+            return []
 
 
 class UltimaConsultaSerializer(serializers.Serializer):
@@ -170,18 +220,18 @@ class UltimaConsultaSerializer(serializers.Serializer):
         """
         Transforma la HistoriaClinica en el formato esperado.
         """
-        ultima = historia_clinica.get_ultima_consulta()
+        ultima = historia_clinica.mascota.consultas.order_by('-fecha_consulta').first()
 
         if not ultima:
             return {
                 'mascota_nombre': historia_clinica.mascota.nombre,
-                'propietario_nombre': historia_clinica.mascota.propietario.get_full_name(),
+                'propietario_nombre': historia_clinica.mascota.cliente.usuario.get_full_name(),
                 'ultima_consulta': None,
                 'mensaje': 'Esta mascota no tiene consultas registradas'
             }
 
         return {
             'mascota_nombre': historia_clinica.mascota.nombre,
-            'propietario_nombre': historia_clinica.mascota.propietario.get_full_name(),
+            'propietario_nombre': historia_clinica.mascota.cliente.usuario.get_full_name(),
             'ultima_consulta': ConsultaDetailSerializer(ultima, context=self.context).data
         }
