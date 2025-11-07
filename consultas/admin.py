@@ -2,12 +2,12 @@
 Configuración del panel de administración para el módulo de Consultas.
 
 Registra los modelos con interfaces personalizadas para gestión desde /admin/
+Sara Sanchez
+02 Noviembre 2025
 """
 
 from django.contrib import admin
-from django.utils.html import format_html
 from django.urls import reverse
-from django.utils.safestring import mark_safe
 from .models import (
     Consulta,
     HistoriaClinica,
@@ -16,59 +16,56 @@ from .models import (
     HistorialVacuna
 )
 
-# Mostrar modelos relacionados dentro de otros
+ADMIN_CONSULTA_CHANGE = 'admin:consultas_consulta_change'
+ADMIN_MASCOTA_CHANGE = 'admin:mascotas_mascota_change'
+ADMIN_USER_CHANGE = 'admin:auth_user_change'
+ADMIN_PRODUCTO_CHANGE = 'admin:inventario_producto_change'
+ADMIN_CONSULTA_CHANGELIST = 'admin:consultas_consulta_changelist'
+
+#Modelos relacionados dentro de otros
 
 class PrescripcionInline(admin.TabularInline):
     """
-    Inline para mostrar prescripciones dentro de una consulta.
     Permite agregar/editar medicamentos directamente desde la consulta.
     """
     model = Prescripcion
     extra = 1  # Número de formularios vacíos a mostrar
     min_num = 0  # Mínimo de prescripciones (puede no tener ninguna)
-
     fields = ['medicamento', 'cantidad', 'indicaciones']
-    autocomplete_fields = ['medicamento']  # Búsqueda autocompletable
-
+    autocomplete_fields = ['medicamento']
     verbose_name = "Prescripción"
     verbose_name_plural = "Prescripciones (Medicamentos)"
 
 
 class ExamenInline(admin.TabularInline):
     """
-    Inline para mostrar exámenes dentro de una consulta.
+    mostrar exámenes dentro de una consulta.
     """
     model = Examen
     extra = 1
     min_num = 0
-
     fields = ['tipo_examen', 'descripcion']
-
     verbose_name = "Examen"
     verbose_name_plural = "Exámenes a Realizar"
 
-
 class HistorialVacunaInline(admin.StackedInline):
     """
-    Inline para mostrar registro de vacunas dentro de una consulta.
-    Usa StackedInline porque tiene más campos.
+     mostrar registro de vacunas dentro de una consulta.
     """
     model = HistorialVacuna
     extra = 0
-    max_num = 1  # Solo 1 registro de vacunas por consulta
-
+    max_num = 1
     fields = ['estado', 'vacunas_descripcion']
-
     verbose_name = "Estado de Vacunación"
     verbose_name_plural = "Estado de Vacunación"
 
 # ADMIN: CONSULTA (Principal)
+
 @admin.register(Consulta)
 class ConsultaAdmin(admin.ModelAdmin):
     """
-    Administración de Consultas Veterinarias.
+    Incluye información de la mascota, veterinario, prescripciones y exámenes.
     """
-
     list_display = [
         'id',
         'mascota_link',
@@ -81,14 +78,12 @@ class ConsultaAdmin(admin.ModelAdmin):
         'created_at'
     ]
 
-    # Filtros laterales
     list_filter = [
         'fecha_consulta',
         'veterinario',
         'created_at',
     ]
 
-    # Campos de búsqueda
     search_fields = [
         'mascota__nombre',
         'mascota__propietario__first_name',
@@ -97,13 +92,9 @@ class ConsultaAdmin(admin.ModelAdmin):
         'descripcion_consulta',
     ]
 
-    # Navegación por fecha
     date_hierarchy = 'fecha_consulta'
-
-    # Orden por defecto
     ordering = ['-fecha_consulta']
 
-    # Campos de solo lectura
     readonly_fields = [
         'created_at',
         'updated_at',
@@ -112,10 +103,8 @@ class ConsultaAdmin(admin.ModelAdmin):
         'total_examenes_display',
     ]
 
-    # Autocompletado para relaciones
     autocomplete_fields = ['veterinario', 'mascota']
 
-    # Organización de campos en el formulario
     fieldsets = (
         ('Información General', {
             'fields': (
@@ -132,7 +121,7 @@ class ConsultaAdmin(admin.ModelAdmin):
                 'notas_adicionales',
             )
         }),
-        ('🕐 Auditoría', {
+        ('Auditoría', {
             'fields': (
                 'created_at',
                 'updated_at',
@@ -140,43 +129,41 @@ class ConsultaAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
     )
-    # Inlines (modelos anidados)
+
     inlines = [
         HistorialVacunaInline,
         PrescripcionInline,
         ExamenInline,
     ]
 
-    # Paginación
     list_per_page = 25
 
     @admin.display(description='Mascota', ordering='mascota__nombre')
     def mascota_link(self, obj):
-        """Muestra el nombre de la mascota """
-        url = reverse('admin:mascotas_mascota_change', args=[obj.mascota.id])
-        return format_html('<a href="{}">{}</a>', url, obj.mascota.nombre)
+        """Muestra el nombre de la mascota como enlace al detalle"""
+        return obj.mascota.nombre
 
     @admin.display(description='Veterinario', ordering='veterinario__first_name')
     def veterinario_link(self, obj):
-        """Muestra el veterinario"""
+        """Muestra el nombre completo del veterinario"""
         if obj.veterinario and hasattr(obj.veterinario, 'user'):
-            url = reverse('admin:auth_user_change', args=[obj.veterinario.user.id])
-            nombre = obj.veterinario.user.get_full_name() or obj.veterinario.user.username
-            return format_html('<a href="{}">{}</a>', url, nombre)
+            return obj.veterinario.user.get_full_name() or obj.veterinario.user.username
         return '-'
 
     @admin.display(description='Diagnóstico')
     def diagnostico_corto(self, obj):
-        """Muestra versión corta del diagnóstico"""
+        """Muestra versión resumida del diagnóstico (máximo 50 caracteres)"""
         if len(obj.diagnostico) > 50:
             return f"{obj.diagnostico[:50]}..."
         return obj.diagnostico
 
     @admin.display(description='Datos Personales')
     def datos_personales_display(self, obj):
-        """Muestra los datos personales de la mascota en formato HTML"""
+        """
+        Muestra información consolidada de la mascota en formato texto.
+        """
         datos = obj.get_datos_personales()
-        return format_html(
+        return (
             f"Mascota: {datos['nombre_mascota']}\n"
             f"Propietario: {datos['nombre_propietario']}\n"
             f"Edad: {datos['edad']}\n"
@@ -187,27 +174,21 @@ class ConsultaAdmin(admin.ModelAdmin):
 
     @admin.display(description='Prescripciones')
     def total_prescripciones_display(self, obj):
-        """Muestra el total de prescripciones"""
+        """Muestra el total de medicamentos prescritos"""
         total = obj.get_prescripciones_count()
-        if total > 0:
-            return f"{total} medicamentos"
-        return "Sin prescripciones"
+        return f"{total} medicamento(s)" if total > 0 else "Sin prescripciones"
 
     @admin.display(description='Exámenes')
     def total_examenes_display(self, obj):
-        """Muestra el total de exámenes"""
+        """Muestra el total de exámenes ordenados"""
         total = obj.get_examenes_count()
-        if total > 0:
-            return f"{total} medicamentos"
-        return "Sin examenes"
+        return f"{total} examen(es)" if total > 0 else "Sin exámenes"
 
     @admin.display(description='Vacunación')
     def estado_vacunacion_display(self, obj):
-        """Muestra el estado de vacunación con color"""
+        """Muestra el estado actual de vacunación de la mascota"""
         estado = obj.get_estado_vacunacion_consulta()
         return estado or "No registrado"
-
-    actions = ['exportar_consultas']
 
 # ADMIN: HISTORIA CLÍNICA
 
@@ -216,7 +197,6 @@ class HistoriaClinicaAdmin(admin.ModelAdmin):
     """
     Administración de Historias Clínicas consolidadas.
     """
-
     list_display = [
         'id',
         'mascota_link',
@@ -239,7 +219,6 @@ class HistoriaClinicaAdmin(admin.ModelAdmin):
     ]
 
     date_hierarchy = 'fecha_actualizacion'
-
     ordering = ['-fecha_actualizacion']
 
     readonly_fields = [
@@ -273,68 +252,61 @@ class HistoriaClinicaAdmin(admin.ModelAdmin):
         }),
     )
 
-    # Deshabilitar agregar/eliminar (se crea automáticamente)
     def has_add_permission(self, request):
+        """Deshabilita creación manual (se crea automáticamente con señales)"""
         return False
 
     def has_delete_permission(self, request, obj=None):
+        """Deshabilita eliminación manual (se elimina con la mascota)"""
         return False
 
     @admin.display(description='Mascota', ordering='mascota__nombre')
     def mascota_link(self, obj):
-        """Link a la mascota"""
-        url = reverse('admin:mascotas_mascota_change', args=[obj.mascota.id])
-        return format_html('<a href="{}">{}</a>', url, obj.mascota.nombre)
+        """Muestra el nombre de la mascota"""
+        return obj.mascota.nombre
 
     @admin.display(description='Propietario')
     def propietario_display(self, obj):
-        return obj.mascota.cliente.get_full_name() if hasattr(obj.mascota.cliente, 'get_full_name') else str(
-            obj.mascota.cliente)
+        """Muestra el nombre completo del propietario"""
+        if hasattr(obj.mascota.cliente, 'get_full_name'):
+            return obj.mascota.cliente.get_full_name()
+        return str(obj.mascota.cliente)
 
     @admin.display(description='Total Consultas')
     def total_consultas_display(self, obj):
-        """Muestra el total de consultas como un enlace al listado filtrado."""
+        """Muestra el número total de consultas de la mascota"""
         total = obj.get_total_consultas()
-
-        # URL del admin de consultas filtrada por mascota
-        url = reverse('admin:consultas_consulta_changelist') + f'?mascota__id__exact={obj.mascota.id}'
-
-        return format_html(
-            '<a href="{}" style="background-color: #ffff; padding: 5px 10px; border-radius: 3px; '
-            'text-decoration: none; color: #000;">'
-            '<strong>{}</strong> consulta(s)</a>',
-            url,
-            total
-        )
+        return f"{total} consulta(s)"
 
     @admin.display(description='Estado Vacunación')
     def estado_vacunacion_badge(self, obj):
-        """Badge con color según estado"""
-        estado = obj.get_estado_vacunacion_actual_display()
-
-        return f"{estado}"
+        """Muestra el estado actual de vacunación"""
+        return obj.get_estado_vacunacion_actual_display()
 
     @admin.display(description='Última Consulta')
     def ultima_consulta_display(self, obj):
-        """Muestra info de la última consulta"""
+        """
+        Muestra información resumida de la última consulta.
+        """
         ultima = obj.get_ultima_consulta()
         if ultima:
-            return format_html(
-                '<strong>Fecha:</strong> {}<br>'
-                '<strong>Diagnóstico:</strong> {}',
-                ultima.fecha_consulta.strftime('%d/%m/%Y'),
-                ultima.diagnostico[:50]
+            return (
+                f"Fecha: {ultima.fecha_consulta.strftime('%d/%m/%Y')}\n"
+                f"Diagnóstico: {ultima.diagnostico[:50]}"
             )
         return 'Sin consultas'
 
     @admin.display(description='Medicamentos Frecuentes')
     def medicamentos_frecuentes_display(self, obj):
-        """Lista de medicamentos más prescritos en texto plano"""
+        """
+        Lista los 3 medicamentos más prescritos con su frecuencia.
+        """
         medicamentos = obj.get_medicamentos_frecuentes(limit=3)
         if medicamentos:
-            # Creamos una lista de strings "Nombre (cantidadx)"
-            lista_meds = [f"{med['medicamento__nombre']} ({med['cantidad_prescripciones']}x)" for med in medicamentos]
-            # Unimos todo con comas
+            lista_meds = [
+                f"{med['medicamento__nombre']} ({med['cantidad_prescripciones']}x)"
+                for med in medicamentos
+            ]
             return ", ".join(lista_meds)
         return 'Sin prescripciones'
 
@@ -343,8 +315,9 @@ class HistoriaClinicaAdmin(admin.ModelAdmin):
 @admin.register(Prescripcion)
 class PrescripcionAdmin(admin.ModelAdmin):
     """
-    Administración de Prescripciones.
+    Muestra información de stock y permite vincular con consultas.
     """
+
     list_display = [
         'id',
         'consulta_link',
@@ -367,11 +340,9 @@ class PrescripcionAdmin(admin.ModelAdmin):
     ]
 
     date_hierarchy = 'fecha_prescripcion'
-
     ordering = ['-fecha_prescripcion']
 
     readonly_fields = ['fecha_prescripcion', 'stock_disponible_display']
-
     autocomplete_fields = ['consulta', 'medicamento']
 
     fieldsets = (
@@ -392,55 +363,45 @@ class PrescripcionAdmin(admin.ModelAdmin):
         }),
     )
 
-
     @admin.display(description='Consulta')
     def consulta_link(self, obj):
-        """Link a la consulta"""
-        url = reverse('admin:consultas_consulta_change', args=[obj.consulta.id])
-        return format_html(
-            '<a href="{}">Consulta #{}</a>',
-            url,
-            obj.consulta.id
-        )
+        """Muestra el ID de la consulta"""
+        return f"Consulta #{obj.consulta.id}"
 
     @admin.display(description='Mascota')
     def mascota_display(self, obj):
-        """Muestra la mascota"""
+        """Muestra el nombre de la mascota asociada"""
         return obj.consulta.mascota.nombre
 
     @admin.display(description='Medicamento')
     def medicamento_link(self, obj):
-        """Link al medicamento"""
-        url = reverse('admin:inventario_producto_change', args=[obj.medicamento.id])
-        return format_html('<a href="{}">{}</a>', url, obj.medicamento.descripcion)
+        """Muestra la descripción del medicamento"""
+        return obj.medicamento.descripcion
 
     @admin.display(description='Stock Disponible')
     def stock_disponible_display(self, obj):
-        """Muestra stock con color"""
+        """
+        Muestra el stock actual del medicamento.
+        """
         stock = obj.medicamento.stock
+        stock_minimo = obj.medicamento.stock_minimo
 
-        if stock <= obj.medicamento.stock_minimo:
-            color = 'red'
-        elif stock <= obj.medicamento.stock_minimo * 2:
-            color = 'orange'
+        if stock <= stock_minimo:
+            nivel = "CRÍTICO"
+        elif stock <= stock_minimo * 2:
+            nivel = "BAJO"
         else:
-            color = 'green'
+            nivel = "NORMAL"
 
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{} {} unidades</span>',
-            color,
-            stock,
-            obj.medicamento.descripcion
-        )
+        return f"{stock} unidades ({nivel})"
 
 # ADMIN: EXAMEN
 
 @admin.register(Examen)
 class ExamenAdmin(admin.ModelAdmin):
     """
-    Administración de Exámenes.
+    Administración de Exámenes médicos ordenados durante consultas.
     """
-
     list_display = [
         'id',
         'consulta_link',
@@ -462,11 +423,9 @@ class ExamenAdmin(admin.ModelAdmin):
     ]
 
     date_hierarchy = 'fecha_orden'
-
     ordering = ['-fecha_orden']
 
     readonly_fields = ['fecha_orden']
-
     autocomplete_fields = ['consulta']
 
     fieldsets = (
@@ -487,23 +446,22 @@ class ExamenAdmin(admin.ModelAdmin):
 
     @admin.display(description='Consulta')
     def consulta_link(self, obj):
-        """Link a la consulta"""
-        url = reverse('admin:consultas_consulta_change', args=[obj.consulta.id])
-        return format_html('<a href="{}">Consulta #{}</a>', url, obj.consulta.id)
+        """Muestra el ID de la consulta"""
+        return f"Consulta #{obj.consulta.id}"
 
     @admin.display(description='Mascota')
     def mascota_display(self, obj):
-        """Muestra la mascota"""
+        """Muestra el nombre de la mascota"""
         return obj.consulta.mascota.nombre
 
     @admin.display(description='Tipo de Examen')
     def tipo_examen_badge(self, obj):
-        """Badge del tipo de examen"""
+        """Muestra el tipo de examen legible"""
         return obj.get_tipo_examen_display()
 
     @admin.display(description='Descripción')
     def descripcion_corta(self, obj):
-        """Versión corta de la descripción"""
+        """Muestra versión resumida de la descripción (máximo 50 caracteres)"""
         if obj.descripcion:
             if len(obj.descripcion) > 50:
                 return f"{obj.descripcion[:50]}..."
@@ -515,9 +473,8 @@ class ExamenAdmin(admin.ModelAdmin):
 @admin.register(HistorialVacuna)
 class HistorialVacunaAdmin(admin.ModelAdmin):
     """
-    Administración de Historial de Vacunas.
+    Administración de Historial de Vacunas registrado por consulta.
     """
-
     list_display = [
         'id',
         'consulta_link',
@@ -538,11 +495,9 @@ class HistorialVacunaAdmin(admin.ModelAdmin):
     ]
 
     date_hierarchy = 'fecha_registro'
-
     ordering = ['-fecha_registro']
 
     readonly_fields = ['fecha_registro']
-
     autocomplete_fields = ['consulta']
 
     fieldsets = (
@@ -563,28 +518,24 @@ class HistorialVacunaAdmin(admin.ModelAdmin):
 
     @admin.display(description='Consulta')
     def consulta_link(self, obj):
-        """Link a la consulta"""
-        url = reverse('admin:consultas_consulta_change', args=[obj.consulta.id])
-        return format_html('<a href="{}">Consulta #{}</a>', url, obj.consulta.id)
+        """Muestra el ID de la consulta"""
+        return f"Consulta #{obj.consulta.id}"
 
     @admin.display(description='Mascota')
     def mascota_display(self, obj):
-        """Muestra la mascota"""
+        """Muestra el nombre de la mascota"""
         return obj.consulta.mascota.nombre
 
     @admin.display(description='Estado')
     def estado_badge(self, obj):
-        """Badge con color según estado"""
-        estado = obj.get_estado_display()
-
-
-        return estado
+        """Muestra el estado de vacunación legible"""
+        return obj.get_estado_display()
 
     @admin.display(description='Vacunas')
     def vacunas_descripcion_corta(self, obj):
-        """Versión corta de vacunas"""
+        """Muestra versión resumida de las vacunas (máximo 40 caracteres)"""
         if obj.vacunas_descripcion:
             if len(obj.vacunas_descripcion) > 40:
                 return f"{obj.vacunas_descripcion[:40]}..."
             return obj.vacunas_descripcion
-        return format_html('<span style="color: gray;">-</span>')
+        return '-'
