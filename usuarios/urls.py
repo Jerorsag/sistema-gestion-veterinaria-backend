@@ -20,4 +20,6 @@ urlpatterns = [
 
      # Perfil del usuario autenticado
     path('perfil/', PerfilView.as_view(), name='perfil')
+
+
 ]
