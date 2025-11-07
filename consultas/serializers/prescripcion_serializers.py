@@ -5,17 +5,19 @@ Serializers para el modelo Prescripcion.
 from rest_framework import serializers
 from consultas.models import Prescripcion
 
+MEDICAMENTO_nombre = 'medicamento.nombre'
+MEDICAMENTO_descripcion = 'medicamento.descripcion'
+MEDICAMENTO_stock = 'medicamento.stock'
+
 
 class PrescripcionListSerializer(serializers.ModelSerializer):
     """
     Serializer simplificado para listar prescripciones.
     """
-
     producto_nombre = serializers.CharField(
         source='medicamento.nombre',
         read_only=True
     )
-
     class Meta:
         model = Prescripcion
         fields = [
@@ -26,14 +28,12 @@ class PrescripcionListSerializer(serializers.ModelSerializer):
             'indicaciones',
         ]
 
-
 class PrescripcionSerializer(serializers.ModelSerializer):
     """
     Incluye información detallada del producto (medicamento) completo para lectura de prescripciones.
     """
-
     producto_nombre = serializers.CharField(
-        source='medicamento.descripcion',
+        source=MEDICAMENTO_descripcion,
         read_only=True
     )
 
@@ -69,19 +69,18 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
     """
 
     producto_nombre = serializers.CharField(
-        source='medicamento.descripcion',
+        source=MEDICAMENTO_descripcion,
         read_only=True
     )
 
     stock_disponible = serializers.IntegerField(
-        source='medicamento.stock',
+        source=MEDICAMENTO_stock,
         read_only=True
     )
 
     class Meta:
         model = Prescripcion
         fields = [
-            'consulta',
             'medicamento',  # FK → Producto
             'producto_nombre',
             'cantidad',
@@ -118,14 +117,13 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
         producto = data.get('medicamento')
         cantidad = data.get('cantidad')
 
-        if producto and cantidad:
-            if producto.cantidad_disponible < cantidad:
-                raise serializers.ValidationError({
-                    'cantidad': (
-                        f'Stock insuficiente. Solo hay {producto.cantidad_disponible} '
-                        f'unidades disponibles de {producto.nombre}'
-                    )
-                })
+        if producto and cantidad and producto.stock < cantidad:
+            raise serializers.ValidationError({
+                'cantidad': (
+                    f'Stock insuficiente. Solo hay {producto.cantidad_disponible} '
+                    f'unidades disponibles de {producto.nombre}'
+                )
+            })
 
         return data
 
