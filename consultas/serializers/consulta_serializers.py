@@ -20,7 +20,7 @@ from .vacuna_serializers import HistorialVacunaSerializer, HistorialVacunaCreate
 
 User = get_user_model()
 
-
+VETERINARIO_GET = 'veterinario.get_full_name';
 class ConsultaListSerializer(serializers.ModelSerializer):
     """
     Serializer simplificado para listar consultas.
@@ -60,7 +60,6 @@ class ConsultaDetailSerializer(serializers.ModelSerializer):
     Serializer detallado para ver una consulta específica como los datos la prescripcion y
     todo lo que fue ordenado.
     """
-
     # Datos personales (auto-rellenados desde Mascota)
     datos_personales = serializers.SerializerMethodField(
         help_text="Datos de la mascota que se auto-rellenan en el formulario"
@@ -68,10 +67,9 @@ class ConsultaDetailSerializer(serializers.ModelSerializer):
 
     # Veterinario que atendió
     veterinario_nombre = serializers.CharField(
-        source='veterinario.get_full_name',
+        source=VETERINARIO_GET,
         read_only=True
     )
-
     prescripciones = PrescripcionSerializer(many=True, read_only=True)
     examenes = ExamenSerializer(many=True, read_only=True)
     vacunas = HistorialVacunaSerializer(many=True, read_only=True)
@@ -98,10 +96,14 @@ class ConsultaDetailSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_datos_personales(self, obj):
-        """
-        Retorna los datos personales que se auto-rellenan en el formulario.
-        """
-        return obj.get_datos_personales()
+        cliente = obj.mascota.cliente if hasattr(obj, 'mascota') and obj.mascota else None
+        if cliente:
+            return {
+                "nombre": f"{cliente.usuario.nombre} {cliente.usuario.apellido}",
+                "telefono": getattr(cliente, "telefono", None),
+                "direccion": getattr(cliente, "direccion", None),
+            }
+        return None
 
 
 class ConsultaCreateSerializer(serializers.ModelSerializer):
@@ -198,7 +200,7 @@ class ConsultaSerializer(serializers.ModelSerializer):
 
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
     veterinario_nombre = serializers.CharField(
-        source='veterinario.get_full_name',
+        source=VETERINARIO_GET,
         read_only=True
     )
 
@@ -218,3 +220,4 @@ class ConsultaSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
