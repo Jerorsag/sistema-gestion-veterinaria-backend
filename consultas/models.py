@@ -13,10 +13,7 @@ Sara Sanchez
 """
 
 User = get_user_model()
-
-# --------------------------------------------------------------------------------
 # HISTORIAL DE VACUNAS
-# --------------------------------------------------------------------------------
 
 class HistorialVacuna(models.Model):
     """
@@ -35,21 +32,18 @@ class HistorialVacuna(models.Model):
         on_delete=models.CASCADE,
         related_name='vacunas',
         verbose_name=_("Consulta"),
-        help_text=_("Consulta en la que se registró este estado de vacunación")
     )
 
     estado = models.CharField(
         max_length=20,
         choices=ESTADO_CHOICES,
         verbose_name=_("Estado de vacunación"),
-        help_text=_("Estado actual de las vacunas de la mascota")
     )
 
     vacunas_descripcion = models.TextField(
         verbose_name=_("Vacunas pendientes/aplicadas"),
-        help_text=_("Ej: Rabia, Parvovirus, Moquillo. Campo obligatorio si estado != AL_DIA"),
         blank=True,
-        null=True
+        default=""
     )
 
     fecha_registro = models.DateTimeField(
@@ -89,16 +83,12 @@ class HistorialVacuna(models.Model):
         if self.estado in ['AL_DIA', 'NINGUNA']:
             self.vacunas_descripcion = None
 
-
-# --------------------------------------------------------------------------------
 # PRESCRIPCIÓN DE MEDICAMENTOS
-# --------------------------------------------------------------------------------
 
 class Prescripcion(models.Model):
     """
     Medicamentos recetados durante una consulta, asociados al inventario.
     """
-
     consulta = models.ForeignKey(
         'Consulta',
         on_delete=models.CASCADE,
@@ -111,20 +101,17 @@ class Prescripcion(models.Model):
         on_delete=models.PROTECT,
         verbose_name=_("Medicamento"),
         related_name='prescripciones',
-        help_text=_("Medicamento del inventario a prescribir")
     )
 
     cantidad = models.PositiveIntegerField(
         validators=[MinValueValidator(1)],
         verbose_name=_("Cantidad"),
-        help_text=_("Cantidad de unidades a suministrar")
     )
 
     indicaciones = models.TextField(
         blank=True,
-        null=True,
+        default="",
         verbose_name=_("Indicaciones de uso"),
-        help_text=_("Ej: Tomar 1 tableta cada 8 horas durante 7 días")
     )
 
     fecha_prescripcion = models.DateTimeField(
@@ -160,19 +147,12 @@ class Prescripcion(models.Model):
                 'cantidad': _("La cantidad debe ser al menos 1")
             })
 
-        # Validaciones de stock y vencimiento se manejarán en servicios
-        # para mantener este modelo limpio de lógica de negocio.
-
-
-# --------------------------------------------------------------------------------
 # EXÁMENES MÉDICOS
-# --------------------------------------------------------------------------------
 
 class Examen(models.Model):
     """
     Exámenes médicos asociados a una consulta.
     """
-
     TIPO_EXAMEN_CHOICES = [
         ('HEMOGRAMA', 'Hemograma completo'),
         ('QUIMICA_SANGUINEA', 'Química sanguínea'),
@@ -201,9 +181,8 @@ class Examen(models.Model):
 
     descripcion = models.TextField(
         blank=True,
-        null=True,
+        default="",
         verbose_name=_("Descripción adicional"),
-        help_text=_("Detalles específicos del examen a realizar")
     )
 
     fecha_orden = models.DateTimeField(
@@ -222,22 +201,17 @@ class Examen(models.Model):
     def __str__(self):
         return f"{self.get_tipo_examen_display()}"
 
-
-# --------------------------------------------------------------------------------
 # CONSULTA
-# --------------------------------------------------------------------------------
 
 class Consulta(models.Model):
     """
     Consulta veterinaria completa, con los datos de la mascota y el veterinario.
     """
-
     mascota = models.ForeignKey(
         'mascotas.Mascota',
         on_delete=models.CASCADE,
         related_name='consultas',
         verbose_name=_("Mascota"),
-        help_text=_("Mascota que recibe la consulta.")
     )
 
     veterinario = models.ForeignKey(
@@ -246,7 +220,6 @@ class Consulta(models.Model):
         null=True,
         related_name='consultas_atendidas',
         verbose_name=_("Veterinario"),
-        help_text=_("Veterinario que atiende la consulta")
     )
 
     fecha_consulta = models.DateTimeField(
@@ -256,19 +229,16 @@ class Consulta(models.Model):
 
     descripcion_consulta = models.TextField(
         verbose_name=_("Descripción de la consulta"),
-        help_text=_("Síntomas, observaciones, motivo de consulta.")
     )
 
     diagnostico = models.TextField(
         verbose_name=_("Diagnóstico"),
-        help_text=_("Diagnóstico clínico del veterinario.")
     )
 
     notas_adicionales = models.TextField(
         blank=True,
-        null=True,
+        default="",
         verbose_name=_("Notas adicionales"),
-        help_text=_("Recomendaciones o seguimiento")
     )
 
     created_at = models.DateTimeField(
@@ -304,12 +274,10 @@ class Consulta(models.Model):
             raise ValidationError({
                 'descripcion_consulta': _("La descripción de la consulta es obligatoria")
             })
-
         if not self.diagnostico or self.diagnostico.strip() == '':
             raise ValidationError({
                 'diagnostico': _("Debe ingresar un diagnóstico")
             })
-
     def get_prescripciones_count(self):
         """Devuelve el número de prescripciones asociadas a esta consulta"""
         return self.prescripciones.count()
@@ -325,21 +293,16 @@ class Consulta(models.Model):
             return historial.get_estado_display()
         return "No registrado"
 
-# --------------------------------------------------------------------------------
 # HISTORIA CLÍNICA
-# --------------------------------------------------------------------------------
-
 class HistoriaClinica(models.Model):
     """
     Historia clínica consolidada de una mascota.
     """
-
     mascota = models.OneToOneField(
         'mascotas.Mascota',
         on_delete=models.CASCADE,
         related_name='historias_consulta',
         verbose_name=_("Mascota"),
-        help_text=_("Cada mascota tiene una única historia clínica.")
     )
 
     fecha_creacion = models.DateTimeField(
@@ -355,9 +318,8 @@ class HistoriaClinica(models.Model):
     estado_vacunacion_actual = models.CharField(
         max_length=20,
         choices=HistorialVacuna.ESTADO_CHOICES,
-        default='PENDIENTE',
+        default='',
         verbose_name=_("Estado de vacunación actual"),
-        help_text=_("Se actualiza automáticamente con cada consulta")
     )
 
     class Meta:
