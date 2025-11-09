@@ -49,15 +49,15 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
             'mascota__consultas'
         )
 
-        # ✅ PRIMERO: Admins ven todo
+        #Admins ven todo
         if user.is_staff:
             return queryset
 
-        # ✅ SEGUNDO: Veterinarios y practicantes ven todo
+        #Veterinarios y practicantes ven todo
         if hasattr(user, 'perfil_veterinario') or hasattr(user, 'perfil_practicante'):
             return queryset
 
-        # ✅ TERCERO: Clientes solo ven sus mascotas
+        #Clientes solo ven sus mascotas
         # (Solo llega aquí si NO es admin ni veterinario)
         if hasattr(user, 'perfil_cliente'):
             cliente = user.perfil_cliente
