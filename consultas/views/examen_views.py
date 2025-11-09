@@ -41,15 +41,15 @@ class ExamenViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         queryset = super().get_queryset()
 
-        # ✅ PRIMERO: Admins ven todo
+        #Admins ven todo
         if user.is_staff:
             return queryset
 
-        # ✅ SEGUNDO: Veterinarios y practicantes ven todo
+        #Veterinarios y practicantes ven todo
         if hasattr(user, 'perfil_veterinario') or hasattr(user, 'perfil_practicante'):
             return queryset
 
-        # ✅ TERCERO: Clientes solo ven exámenes de sus mascotas
+        #Clientes solo ven exámenes de sus mascotas
         if hasattr(user, 'perfil_cliente'):
             cliente = user.perfil_cliente
             return queryset.filter(consulta__mascota__cliente=cliente)
