@@ -64,3 +64,34 @@ class HistorialVacunaCreateSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         """Usar el serializer de lectura para la respuesta"""
         return HistorialVacunaSerializer(instance).data
+
+class HistorialVacunaListSerializer(serializers.ModelSerializer):
+    """
+    Serializer simplificado para listar historial de vacunas.
+    """
+    estado_display = serializers.CharField(
+        source='get_estado_display',
+        read_only=True
+    )
+    consulta_id = serializers.IntegerField(source='consulta.id', read_only=True)
+    mascota_nombre = serializers.CharField(
+        source='consulta.mascota.nombre',
+        read_only=True
+    )
+    veterinario_nombre = serializers.CharField(
+        source='consulta.veterinario.usuario.get_full_name',
+        read_only=True
+    )
+
+    class Meta:
+        model = HistorialVacuna
+        fields = [
+            'id',
+            'consulta_id',
+            'mascota_nombre',
+            'veterinario_nombre',
+            'estado',
+            'estado_display',
+            'vacunas_descripcion',
+            'fecha_registro',
+        ]

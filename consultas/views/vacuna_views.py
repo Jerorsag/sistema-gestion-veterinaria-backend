@@ -1,8 +1,8 @@
 """
  viewa y endpoinds para gestionar Historial de Vacunas.
 """
-
-from rest_framework import viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -10,11 +10,11 @@ from rest_framework.permissions import IsAuthenticated
 from consultas.models import HistorialVacuna
 from consultas.serializers.vacuna_serializers import (
     HistorialVacunaSerializer,
-    HistorialVacunaCreateSerializer
+    HistorialVacunaListSerializer
 )
 
 
-class HistorialVacunaViewSet(viewsets.ModelViewSet):
+class HistorialVacunaViewSet(viewsets.ReadOnlyModelViewSet):
     """
     para gestión del historial de vacunas.
     """
@@ -23,22 +23,41 @@ class HistorialVacunaViewSet(viewsets.ModelViewSet):
     serializer_class = HistorialVacunaSerializer
     permission_classes = [IsAuthenticated]
 
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['consulta', 'estado']
+    search_fields = ['vacunas_descripcion']
+    ordering_fields = ['fecha_registro']
+    ordering = ['-fecha_registro']
+
     def get_serializer_class(self):
         """Retorna el serializer apropiado"""
-        if self.action == 'create':
-            return HistorialVacunaCreateSerializer
+        if self.action == 'list':
+            return HistorialVacunaListSerializer
         return HistorialVacunaSerializer
 
     def get_queryset(self):
-        """Filtra registros según permisos del usuario"""
+        """
+        Filtra registros según permisos del usuario.
+        Prioridad: Admin > Veterinario/Practicante > Cliente
+        """
         user = self.request.user
         queryset = super().get_queryset()
 
-        # Si es propietario, solo registros de sus mascotas
-        if hasattr(user, 'mascotas'):
-            return queryset.filter(consulta__mascota__propietario=user)
+        # ✅ PRIMERO: Admins ven todo
+        if user.is_staff:
+            return queryset
 
-        return queryset
+        # ✅ SEGUNDO: Veterinarios y practicantes ven todo
+        if hasattr(user, 'perfil_veterinario') or hasattr(user, 'perfil_practicante'):
+            return queryset
+
+        # ✅ TERCERO: Clientes solo ven registros de sus mascotas
+        if hasattr(user, 'perfil_cliente'):
+            cliente = user.perfil_cliente
+            return queryset.filter(consulta__mascota__cliente=cliente)
+
+        # Sin rol: sin acceso
+        return queryset.none()
 
     @action(detail=False, methods=['get'], url_path='mascota/(?P<mascota_id>[^/.]+)')
     def por_mascota(self, request, mascota_id=None):

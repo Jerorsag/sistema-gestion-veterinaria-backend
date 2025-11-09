@@ -42,3 +42,29 @@ class ExamenCreateSerializer(serializers.ModelSerializer):
             'tipo_examen',
             'descripcion',
         ]
+
+class ExamenListSerializer(serializers.ModelSerializer):
+    """
+    Serializer simplificado para listar exámenes.
+    """
+    tipo_examen_display = serializers.CharField(
+        source='get_tipo_examen_display',
+        read_only=True
+    )
+    consulta_id = serializers.IntegerField(source='consulta.id', read_only=True)
+    mascota_nombre = serializers.CharField(
+        source='consulta.mascota.nombre',
+        read_only=True
+    )
+
+    class Meta:
+        model = Examen
+        fields = [
+            'id',
+            'consulta_id',
+            'mascota_nombre',
+            'tipo_examen',
+            'tipo_examen_display',
+            'descripcion',
+            'fecha_orden',
+        ]

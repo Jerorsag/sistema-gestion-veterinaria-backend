@@ -31,9 +31,6 @@ router.register(r'examenes', ExamenViewSet, basename='examen')
 # Vacunas: /api/vacunas/
 router.register(r'vacunas', HistorialVacunaViewSet, basename='vacuna')
 
-# Nombre de la app para namespacing
-app_name = 'consultas'
-
 # Patrones de URL
 urlpatterns = [
     # Incluir todas las rutas generadas automáticamente por el router

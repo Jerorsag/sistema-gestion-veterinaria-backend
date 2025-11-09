@@ -10,7 +10,6 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.db.models import Count
 
-# IMPORTANTE: Usar el modelo de consultas, NO de mascotas
 from consultas.models import HistoriaClinica
 from consultas.serializers.historia_clinica_serializers import (
     HistoriaClinicaSerializer,
@@ -36,6 +35,7 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         """
         Filtra historias según el rol del usuario.
+        Prioridad: Admin > Veterinario/Practicante > Cliente
         """
         user = self.request.user
 
@@ -49,13 +49,22 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
             'mascota__consultas'
         )
 
-        # FILTRADO POR ROL
-        if hasattr(user, 'cliente'):
-            cliente = user.cliente
+        # ✅ PRIMERO: Admins ven todo
+        if user.is_staff:
+            return queryset
+
+        # ✅ SEGUNDO: Veterinarios y practicantes ven todo
+        if hasattr(user, 'perfil_veterinario') or hasattr(user, 'perfil_practicante'):
+            return queryset
+
+        # ✅ TERCERO: Clientes solo ven sus mascotas
+        # (Solo llega aquí si NO es admin ni veterinario)
+        if hasattr(user, 'perfil_cliente'):
+            cliente = user.perfil_cliente
             return queryset.filter(mascota__cliente=cliente)
 
-        # Si no tiene perfil_cliente, es VETERINARIO, PRACTICANTE, RECEPCIONISTA o ADMIN
-        return queryset
+        # Sin rol: sin acceso
+        return queryset.none()
 
     def get_serializer_class(self):
         """

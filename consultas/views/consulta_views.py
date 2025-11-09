@@ -14,7 +14,8 @@ from consultas.serializers.consulta_serializers import (
     ConsultaSerializer,
     ConsultaListSerializer,
     ConsultaDetailSerializer,
-    ConsultaCreateSerializer
+    ConsultaCreateSerializer,
+    ConsultaUpdateSerializer
 )
 
 
@@ -49,22 +50,33 @@ class ConsultaViewSet(viewsets.ModelViewSet):
             return ConsultaDetailSerializer
         elif self.action == 'create':
             return ConsultaCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return ConsultaUpdateSerializer
         return ConsultaSerializer
 
     def get_queryset(self):
         """
         Filtra las consultas según el rol del usuario.
+        Prioridad: Admin > Veterinario > Cliente
         """
         user = self.request.user
         queryset = super().get_queryset()
 
-        # Si es propietario (cliente), solo sus mascotas
-        if hasattr(user, 'mascotas'):
-            return queryset.filter(mascota__propietario=user)
+        # Admins ven todo
+        if user.is_staff:
+            return queryset
 
-        # Si es veterinario, puede ver todas (o solo las suyas según regla de negocio)
-        # Por ahora permitimos que vea todas
-        return queryset
+        # Veterinarios y practicantes ven todo
+        if hasattr(user, 'perfil_veterinario') or hasattr(user, 'perfil_practicante'):
+            return queryset
+
+        # Clientes solo ven sus mascotas
+        if hasattr(user, 'perfil_cliente'):
+            cliente = user.perfil_cliente
+            return queryset.filter(mascota__cliente=cliente)
+
+        # Usuario sin rol específico: sin acceso
+        return queryset.none()
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -86,8 +98,9 @@ class ConsultaViewSet(viewsets.ModelViewSet):
         # Verificar permisos: el propietario solo puede ver sus mascotas
         if consultas.exists():
             primera_consulta = consultas.first()
-            if hasattr(request.user, 'mascotas'):
-                if primera_consulta.mascota.propietario != request.user:
+            if hasattr(request.user, 'perfil_cliente'):
+                cliente = request.user.perfil_cliente
+                if primera_consulta.mascota.cliente != cliente:
                     return Response(
                         {'detail': 'No tiene permiso para ver las consultas de esta mascota'},
                         status=status.HTTP_403_FORBIDDEN
