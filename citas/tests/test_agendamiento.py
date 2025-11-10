@@ -13,7 +13,6 @@ class AgendamientoTests(CitasAPITestCase):
         super().setUp()
         
         # Creamos una fecha "limpia" para las pruebas (ej. 10:00 AM)
-        # Esto soluciona el bug de enviar horas "sucias" (ej. 10:55:34)
         fecha_prueba = (timezone.now() + timedelta(days=5)).date()
         hora_prueba = time(10, 0) # 10:00 AM exactas
         
@@ -26,10 +25,7 @@ class AgendamientoTests(CitasAPITestCase):
         """Prueba de CP-020: Agendar una cita exitosamente."""
         url = '/api/v1/citas/'
         
-        # FIX #2: (Arregla el 400 != 201)
-        # Nuestros modelos usan BigAutoField (un entero), no un UUID.
-        # El serializer espera un IntegerField.
-        # Enviamos el .id directamente como un entero, no como un string.
+        # Enviamos el .id directamente como un entero.
         data = {
             "mascota_id": self.mascota.id,
             "veterinario_id": self.vet_user.id,
@@ -71,6 +67,6 @@ class AgendamientoTests(CitasAPITestCase):
         
         # FIX #3: (Arregla el AssertionError de mensaje)
         # Comprobamos el mensaje de error real que viene del serializer/servicio
-        # (El servicio está en `citas/patrones/composite.py`)
+        # (El servicio está en `citas/patterns/composite.py`)
         self.assertIn("El veterinario no está disponible a esta hora.", str(response.data['non_field_errors']))
         self.assertEqual(Cita.objects.count(), 1)
