@@ -153,7 +153,7 @@ class CitaViewSet(viewsets.ModelViewSet):
 
 
 class ServicioViewSet(viewsets.ModelViewSet):
-    """ Endpoints para los servicios."""
+    """ Endpoint"""
     queryset = Servicio.objects.all()
     serializer_class = serializers.ServicioSerializer # Usa el serializer de lectura
     permission_classes = [IsAuthenticated]
