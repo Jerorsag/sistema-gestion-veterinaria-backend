@@ -14,11 +14,12 @@ class AgendamientoTests(CitasAPITestCase):
         super().setUp() 
         
         # FIX: Creamos una fecha "limpia" para las pruebas (ej. 10:00 AM)
-        # Esto evita el error de enviar horas "sucias" como 10:55:34
-        fecha_prueba = timezone.now().date() + timedelta(days=5)
+        # Esto soluciona el error 'int object has no attribute now' y
+        # el bug de enviar horas "sucias" (ej. 10:55:34)
+        fecha_prueba = (timezone.now() + timedelta(days=5)).date()
         hora_prueba = time(10, 0) # 10:00 AM exactas
         
-        # Convertimos la fecha y hora a un objeto datetime "aware" (consciente de zona horaria)
+        # Convertimos la fecha y hora a un objeto datetime "aware"
         self.fecha_hora_limpia = timezone.make_aware(
             datetime.combine(fecha_prueba, hora_prueba)
         )
@@ -27,7 +28,8 @@ class AgendamientoTests(CitasAPITestCase):
         """Prueba de CP-020: Agendar una cita exitosamente."""
         url = '/api/v1/citas/'
         
-        # Usamos los IDs de entero (BigAutoField) como define el modelo common
+        # FIX (400 != 201):
+        # Enviamos el .id directamente como un entero.
         data = {
             "mascota_id": self.mascota.id,
             "veterinario_id": self.vet_user.id,
@@ -37,7 +39,7 @@ class AgendamientoTests(CitasAPITestCase):
 
         response = self.client.post(url, data, format='json')
 
-        # FIX: Ahora la respuesta debe ser 201
+        # Añadimos 'response.data' al mensaje de error para ver qué falló
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         self.assertEqual(Cita.objects.count(), 1)
         self.assertEqual(Cita.objects.first().estado, EstadoCita.AGENDADA)
@@ -56,9 +58,9 @@ class AgendamientoTests(CitasAPITestCase):
         )
         
         data = {
-            "mascota_id": self.mascota.id,
-            "veterinario_id": self.vet_user.id,
-            "servicio_id": self.servicio.id,
+            "mascota_id": self.mascota.id,            # <-- FIX: ID como entero
+            "veterinario_id": self.vet_user.id,      # <-- FIX: ID como entero
+            "servicio_id": self.servicio.id,        # <-- FIX: ID como entero
             "fecha_hora": self.fecha_hora_limpia.isoformat() # Misma fecha y hora
         }
 
@@ -67,7 +69,8 @@ class AgendamientoTests(CitasAPITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         
-        # FIX: Comprobamos el mensaje de error real que viene del servicio
-        # (El servicio está en `citas/services/disponibilidad.py`)
-        self.assertIn("El veterinario no está disponible a esta hora.", str(response.data))
+        # FIX: Verificamos el mensaje de error correcto
+        # Comprobamos el mensaje de error real que viene del serializer/servicio
+        # (El servicio está en `citas/patrones/composite.py`)
+        self.assertIn("El veterinario no está disponible a esta hora.", str(response.data['non_field_errors']))
         self.assertEqual(Cita.objects.count(), 1)

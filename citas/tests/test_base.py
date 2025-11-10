@@ -8,7 +8,7 @@ from mascotas.models import Mascota, Especie, Raza
 
 # Importaciones de nuestros modelos
 from citas.models import Servicio, Cita
-from citas.patterns.state import EstadoCita
+from citas.patterns.state import EstadoCita # <-- Importamos el State
 
 class CitasAPITestCase(APITestCase):
     """
