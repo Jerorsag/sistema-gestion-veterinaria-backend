@@ -14,7 +14,6 @@ from consultas.serializers.examen_serializers import ExamenSerializer, ExamenCre
 class ExamenViewSet(viewsets.ModelViewSet):
     """
     para gestión de exámenes médicos.
-    Los exámenes normalmente se crean junto con la consulta,
     """
 
     queryset = Examen.objects.all().select_related('consulta')
@@ -42,7 +41,6 @@ class ExamenViewSet(viewsets.ModelViewSet):
     def por_consulta(self, request, consulta_id=None):
         """
         Retorna todos los exámenes de una consulta.
-        GET /api/examenes/consulta/{consulta_id}/
         """
         examenes = self.get_queryset().filter(consulta_id=consulta_id)
         serializer = self.get_serializer(examenes, many=True)

@@ -1,9 +1,5 @@
-from datetime import timedelta
-
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
-from django.template.defaultfilters import date
-
 from .models import Kardex, Producto
 
 #  ACTUALIZA STOCK DESPUÉS DE GUARDAR UN MOVIMIENTO
@@ -44,5 +40,3 @@ def anular_kardex(sender, instance, **kwargs):
 
     # Cancelamos la eliminación de forma silenciosa
     kwargs["signal"].disconnect(anular_kardex)
-
-

@@ -17,7 +17,6 @@ from consultas.serializers.prescripcion_serializers import (
 
 class PrescripcionViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para gestión de prescripciones.
     Integración con Inventario: Valida stock disponible antes de crear, Descuenta automáticamente del inventario (via signal), Genera alertas si el stock es bajo
     """
 

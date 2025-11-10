@@ -10,7 +10,6 @@ class HistorialVacunaSerializer(serializers.ModelSerializer):
     """
     Serializer básico para lectura de historial de vacunas.
     """
-
     estado_display = serializers.CharField(
         source='get_estado_display',
         read_only=True
@@ -20,7 +19,6 @@ class HistorialVacunaSerializer(serializers.ModelSerializer):
         model = HistorialVacuna
         fields = [
             'id',
-            'consulta',
             'estado',
             'estado_display',
             'vacunas_descripcion',
@@ -33,18 +31,15 @@ class HistorialVacunaCreateSerializer(serializers.ModelSerializer):
     """
     Serializer para crear/actualizar historial de vacunas.
     """
-
     class Meta:
         model = HistorialVacuna
         fields = [
-            'consulta',
             'estado',
             'vacunas_descripcion',
         ]
 
     def validate(self, data):
         """
-        Validación cruzada: estado vs vacunas_descripcion.
         si presiona en pendiente o en proceso sale campo para poner cuales vacunes, si presiona al dia
         o ninguna no sale nada
         """

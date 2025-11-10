@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.exceptions import ValidationError
 
 from consultas.models import Consulta
 from consultas.serializers.consulta_serializers import (
@@ -53,8 +54,6 @@ class ConsultaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Filtra las consultas según el rol del usuario.
-        Permisos: Propietarios: Solo consultas de sus mascotas, Veterinarios: Todas las consultas que atendieron,
-        Admin/Recepcionistas: Todas las consultas
         """
         user = self.request.user
         queryset = super().get_queryset()
@@ -68,10 +67,14 @@ class ConsultaViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
+        user = self.request.user
         """
         Guarda la consulta asignando automáticamente el veterinario actual.
         """
-        serializer.save(veterinario=self.request.user)
+        if hasattr(user, "perfil_veterinario") and user.perfil_veterinario is not None:
+            serializer.save(veterinario=user.perfil_veterinario)
+        else:
+            raise ValidationError({"detail": "El usuario autenticado no tiene un perfil de veterinario asociado."})
 
     @action(detail=False, methods=['get'], url_path='mascota/(?P<mascota_id>[^/.]+)')
     def por_mascota(self, request, mascota_id=None):
@@ -131,13 +134,7 @@ class ConsultaViewSet(viewsets.ModelViewSet):
             total=Count('id')
         ).order_by('-mes')[:6]
 
-        # Diagnósticos más frecuentes
-        diagnosticos_frecuentes = queryset.values('diagnostico').annotate(
-            total=Count('id')
-        ).order_by('-total')[:10]
-
         return Response({
             'total_consultas': total,
-            'consultas_por_mes': list(por_mes),
-            'diagnosticos_frecuentes': list(diagnosticos_frecuentes),
+            'consultas_por_mes': list(por_mes)
         })

@@ -1,5 +1,7 @@
 from django.contrib import admin
-from mascotas.models import Especie, Raza, Mascota, HistoriaClinica
+from django.utils.html import format_html
+
+from mascotas.models import Especie, Raza, Mascota
 
 # Jeronimo Rodriguez - 11/03/2025
 
@@ -31,10 +33,3 @@ class MascotaAdmin(BaseAdmin):
     list_filter = ('especie', 'raza', 'sexo')
     search_fields = ('nombre', 'cliente__usuario__nombre', 'cliente__usuario__apellido')
     ordering = ('nombre',)
-
-
-@admin.register(HistoriaClinica)
-class HistoriaClinicaAdmin(BaseAdmin):
-    list_display = ('id', 'mascota', 'fecha_creacion')
-    search_fields = ('mascota__nombre',)
-    ordering = ('-fecha_creacion',)
