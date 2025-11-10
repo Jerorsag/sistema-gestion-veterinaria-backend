@@ -1,6 +1,6 @@
 
 from ..models import Cita
-from ..models.Choices import EstadoCita
+from .state import EstadoCita
 
 def notificar_observadores(evento: str, cita: Cita):
     """

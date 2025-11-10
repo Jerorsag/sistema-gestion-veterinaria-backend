@@ -1,10 +1,10 @@
 from datetime import datetime
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, PermissionDenied
-from citas.services.disponibilidad import obtener_horarios_disponibles
-from citas.services.notificacion import notificar_observadores
+from citas.patterns.composite import obtener_horarios_disponibles
+from citas.patterns.observer import notificar_observadores
 from ..models import Cita, Servicio
-from ..models.Choices import EstadoCita
+from .state import EstadoCita
 from usuarios.models import Usuario
 from mascotas.models import Mascota
 

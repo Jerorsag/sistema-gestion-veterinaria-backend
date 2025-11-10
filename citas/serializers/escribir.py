@@ -7,7 +7,7 @@ from ..services import (
     reagendar_cita
 )
 
-from citas.models.Choices import EstadoCita
+from citas.patterns.state import EstadoCita
 
 
 class CrearCitaSerializer(serializers.Serializer):
