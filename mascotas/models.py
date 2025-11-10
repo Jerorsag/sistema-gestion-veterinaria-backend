@@ -69,18 +69,3 @@ class Mascota(BaseModel):
 
     def __str__(self):
         return f"{self.nombre} - {self.cliente.usuario.get_full_name()}"
-
-
-class HistoriaClinica(BaseModel):
-    """Historial clínico básico asociado a una mascota."""
-    mascota = models.OneToOneField(Mascota, on_delete=models.CASCADE, related_name='historia_clinica')
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    observaciones_generales = models.TextField('Observaciones generales', blank=True)
-
-    class Meta:
-        db_table = 'historias_clinicas'
-        verbose_name = 'Historia Clínica'
-        verbose_name_plural = 'Historias Clínicas'
-
-    def __str__(self):
-        return f"Historia clínica de {self.mascota.nombre}"
