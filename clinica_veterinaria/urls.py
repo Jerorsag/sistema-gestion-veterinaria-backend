@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import path, include
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 def health(request):
     """Endpoint de health check para monitoreo."""
@@ -33,7 +34,9 @@ def api_root(request):
         'version': '1.0.0',
         'endpoints': {
             'auth': request.build_absolute_uri('/api/v1/auth/'),
-            'health': request.build_absolute_uri('/api/health/')
+            'health': request.build_absolute_uri('/api/health/'),
+            'docs': request.build_absolute_uri('/api/docs/'),
+            'redoc': request.build_absolute_uri('/api/redoc/')
         }
     })
 
@@ -53,6 +56,11 @@ urlpatterns = [
     path('api/v1/', include('consultas.urls')),
     path('api/v1/', include('inventario.urls')),
     path('api/v1/', include('citas.urls')),
+
+    # OpenAPI schema + UIs
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]
 
 # Personalización del admin
