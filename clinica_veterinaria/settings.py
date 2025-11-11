@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular',
 
     
     # local apps
@@ -154,6 +155,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
@@ -171,4 +173,21 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,                
     "AUTH_HEADER_TYPES": ("Bearer",),               
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'API Clínica Veterinaria',
+    'DESCRIPTION': 'Documentación modular agrupada automáticamente por prefijo.',
+    'VERSION': '1.0.0',
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': True,
+
+    # Agrupación automática por prefijo de ruta
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+
+    # Esta clave permite agrupar según el prefijo de las rutas:
+    'SCHEMA_PATH_PREFIX_TRIM': False,
+    'SCHEMA_PATH_PREFIX': '/api/v1',
+    'TAGS_SORTER': 'alpha',
 }
