@@ -1,4 +1,5 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from usuarios.views.auth_views import (
     CustomTokenObtainPairView, 
@@ -7,6 +8,12 @@ from usuarios.views.auth_views import (
     verificar_token_view,
     PerfilView
 )
+from usuarios.views.user_views import UsuarioViewSet, RolViewSet
+
+# Configurar el router para los ViewSets
+router = DefaultRouter()
+router.register(r'usuarios', UsuarioViewSet, basename='usuario')
+router.register(r'roles', RolViewSet, basename='rol')
 
 urlpatterns = [
     # Autenticación JWT
@@ -19,7 +26,8 @@ urlpatterns = [
      path('auth/register/', RegistroView.as_view(), name='registro'),
 
      # Perfil del usuario autenticado
-    path('perfil/', PerfilView.as_view(), name='perfil')
+    path('perfil/', PerfilView.as_view(), name='perfil'),
 
-
+    # Rutas del router (CRUD de usuarios y roles)
+    path('', include(router.urls))
 ]
