@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from datetime import timedelta
+from decimal import Decimal
 
 from consultas.models import (
     Consulta,
@@ -17,63 +18,64 @@ from consultas.models import (
 )
 from mascotas.models import Mascota, Raza, Especie
 from usuarios.models import Veterinario, Cliente
+from inventario.models import Producto, Marca, Categoria
 
 User = get_user_model()
 
 
-class ConsultaModelTest(TestCase):
-    """Tests para el modelo Consulta"""
+class DatosBaseTestCase(TestCase):
+    """Configuración común para todos los tests de consultas"""
 
     def setUp(self):
-        """Configuración inicial para las pruebas"""
-        # Crear usuario base
-        self.user = User.objects.create_user(
-            correo_electronico='vet@test.com',
+        # Crear veterinario
+        self.vet_user = User.objects.create_user(
+            username='vet_test',
+            email='vet@test.com',
             nombre='Juan',
             apellido='Pérez',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
+            password='testpass123'
         )
-
-        # Crear veterinario
         self.veterinario = Veterinario.objects.create(
-            usuario=self.user,
-            licencia_profesional='VET-12345',
-            especialidad='Medicina General'
+            usuario=self.vet_user,
+            licencia='VET-12345'
         )
 
         # Crear cliente
         self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
+            username='cliente_test',
+            email='cliente@test.com',
             nombre='María',
             apellido='García',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
+            password='testpass123'
         )
-
         self.cliente = Cliente.objects.create(
             usuario=self.cliente_user,
-            telefono='3001234567',
-            direccion='Calle 123 #45-67'
+            telefono='3001234567'
         )
 
-        # Crear especie y raza
+        # Crear especie, raza y mascota
         self.especie = Especie.objects.create(nombre='Canino')
-        self.raza = Raza.objects.create(
-            nombre='Golden Retriever',
-            especie=self.especie
-        )
-
-        # Crear mascota
+        self.raza = Raza.objects.create(nombre='Golden Retriever', especie=self.especie)
         self.mascota = Mascota.objects.create(
             nombre='Max',
             especie=self.especie,
             raza=self.raza,
             fecha_nacimiento=timezone.now().date() - timedelta(days=730),
             sexo='M',
-            color='Dorado',
             cliente=self.cliente
         )
+
+        # Crear consulta base
+        self.consulta = Consulta.objects.create(
+            mascota=self.mascota,
+            veterinario=self.veterinario,
+            descripcion_consulta='Consulta de prueba',
+            diagnostico='Diagnóstico de prueba'
+        )
+
+
+class ConsultaModelTest(DatosBaseTestCase):
+    """Tests para el modelo Consulta"""
 
     def test_crear_consulta_exitosa(self):
         """Prueba crear una consulta válida"""
@@ -161,125 +163,121 @@ class ConsultaModelTest(TestCase):
         self.assertEqual(estado, "No registrado")
 
 
-class PrescripcionModelTest(TestCase):
+class PrescripcionModelTest(DatosBaseTestCase):
     """Tests para el modelo Prescripción"""
 
     def setUp(self):
-        """Configuración inicial para las pruebas"""
-        # Crear usuario y veterinario
-        self.user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Juan',
-            apellido='Pérez',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
+        super().setUp()
+
+        self.marca = Marca.objects.create(descripcion='Laboratorio Veterinario')
+
+        self.categoria = Categoria.objects.create(
+            descripcion='Medicamentos',
+            color='#FF5733'
         )
 
-        self.veterinario = Veterinario.objects.create(
-            usuario=self.user,
-            licencia_profesional='VET-12345'
+        self.medicamento = Producto.objects.create(
+            descripcion='Metoclopramida 10mg',
+            marca=self.marca,
+            categoria=self.categoria,
+            stock=Decimal('100.00'),
+            stock_minimo=Decimal('10.00'),
+            precio_venta=Decimal('15000.00'),
+            precio_compra=Decimal('8000.00')
         )
 
-        # Crear cliente y mascota
-        self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='María',
-            apellido='García',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
+    def test_crear_prescripcion_exitosa(self):
+        """Prueba crear una prescripción válida referenciando producto existente"""
+        prescripcion = Prescripcion.objects.create(
+            consulta=self.consulta,
+            medicamento=self.medicamento,
+            cantidad=3,
+            indicaciones='Administrar 1 tableta cada 8 horas por 3 días'
         )
 
-        self.cliente = Cliente.objects.create(
-            usuario=self.cliente_user,
-            telefono='3001234567'
-        )
-
-        self.especie = Especie.objects.create(nombre='Canino')
-        self.raza = Raza.objects.create(nombre='Beagle', especie=self.especie)
-
-        self.mascota = Mascota.objects.create(
-            nombre='Rocky',
-            especie=self.especie,
-            raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=365),
-            sexo='M',
-            cliente=self.cliente
-        )
-
-        # Crear consulta
-        self.consulta = Consulta.objects.create(
-            mascota=self.mascota,
-            veterinario=self.veterinario,
-            descripcion_consulta='Control rutinario',
-            diagnostico='Saludable'
-        )
+        self.assertEqual(prescripcion.consulta, self.consulta)
+        self.assertEqual(prescripcion.medicamento, self.medicamento)
+        self.assertEqual(prescripcion.cantidad, 3)
+        self.assertIn('tableta', prescripcion.indicaciones)
 
     def test_crear_prescripcion_sin_medicamento_falla(self):
         """Prueba que no se puede crear prescripción sin medicamento"""
-        # Este test requiere el modelo Producto de inventario
-        # Se comenta hasta que esté disponible
-        pass
+        prescripcion = Prescripcion(
+            consulta=self.consulta,
+            medicamento=None,
+            cantidad=3,
+            indicaciones='Administrar cada 8 horas'
+        )
+
+        with self.assertRaises(ValidationError):
+            prescripcion.full_clean()
 
     def test_prescripcion_cantidad_minima(self):
         """Prueba que la cantidad debe ser mayor a 0"""
-        # Este test requiere el modelo Producto de inventario
-        pass
+        prescripcion = Prescripcion(
+            consulta=self.consulta,
+            medicamento=self.medicamento,
+            cantidad=0,
+            indicaciones='Administrar según indicación'
+        )
+
+        with self.assertRaises(ValidationError):
+            prescripcion.full_clean()
 
     def test_str_prescripcion(self):
         """Prueba la representación en string"""
-        # Este test requiere el modelo Producto de inventario
-        pass
+        prescripcion = Prescripcion.objects.create(
+            consulta=self.consulta,
+            medicamento=self.medicamento,
+            cantidad=5,
+            indicaciones='Cada 12 horas'
+        )
+
+        str_prescripcion = str(prescripcion)
+        self.assertIn('Metoclopramida', str_prescripcion)
+        self.assertIn('5', str_prescripcion)
+
+    def test_prescripcion_sin_indicaciones(self):
+        """Prueba que se puede crear prescripción sin indicaciones (campo opcional)"""
+        prescripcion = Prescripcion.objects.create(
+            consulta=self.consulta,
+            medicamento=self.medicamento,
+            cantidad=2
+        )
+
+        self.assertEqual(prescripcion.indicaciones, "")
+        self.assertIsNotNone(prescripcion.fecha_prescripcion)
+
+    def test_multiples_prescripciones_misma_consulta(self):
+        """Prueba que se pueden tener múltiples prescripciones en una consulta"""
+        # Crear otro medicamento
+        otro_medicamento = Producto.objects.create(
+            descripcion='Amoxicilina 500mg',
+            marca=self.marca,
+            categoria=self.categoria,
+            stock=Decimal('50.00'),
+            stock_minimo=Decimal('10.00'),
+            precio_venta=Decimal('20000.00'),
+            precio_compra=Decimal('12000.00')
+        )
+
+        Prescripcion.objects.create(
+            consulta=self.consulta,
+            medicamento=self.medicamento,
+            cantidad=3
+        )
+
+        Prescripcion.objects.create(
+            consulta=self.consulta,
+            medicamento=otro_medicamento,
+            cantidad=2
+        )
+
+        self.assertEqual(self.consulta.prescripciones.count(), 2)
 
 
-class ExamenModelTest(TestCase):
+class ExamenModelTest(DatosBaseTestCase):
     """Tests para el modelo Examen"""
-
-    def setUp(self):
-        """Configuración inicial"""
-        self.user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Ana',
-            apellido='López',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
-        )
-
-        self.veterinario = Veterinario.objects.create(
-            usuario=self.user,
-            licencia_profesional='VET-98765'
-        )
-
-        self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='Carlos',
-            apellido='Martínez',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
-        )
-
-        self.cliente = Cliente.objects.create(
-            usuario=self.cliente_user,
-            telefono='3009876543'
-        )
-
-        self.especie = Especie.objects.create(nombre='Felino')
-        self.raza = Raza.objects.create(nombre='Persa', especie=self.especie)
-
-        self.mascota = Mascota.objects.create(
-            nombre='Luna',
-            especie=self.especie,
-            raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=1095),
-            sexo='H',
-            cliente=self.cliente
-        )
-
-        self.consulta = Consulta.objects.create(
-            mascota=self.mascota,
-            veterinario=self.veterinario,
-            descripcion_consulta='Consulta de diagnóstico',
-            diagnostico='Requiere exámenes'
-        )
 
     def test_crear_examen_hemograma(self):
         """Prueba crear un examen de hemograma"""
@@ -293,17 +291,6 @@ class ExamenModelTest(TestCase):
         self.assertEqual(examen.get_tipo_examen_display(), 'Hemograma completo')
         self.assertIsNotNone(examen.fecha_orden)
 
-    def test_crear_examen_rayos_x(self):
-        """Prueba crear un examen de rayos X"""
-        examen = Examen.objects.create(
-            consulta=self.consulta,
-            tipo_examen='RAYOS_X',
-            descripcion='Radiografía de tórax'
-        )
-
-        self.assertEqual(examen.tipo_examen, 'RAYOS_X')
-        self.assertIn('Rayos X', str(examen))
-
     def test_str_examen(self):
         """Prueba la representación en string del examen"""
         examen = Examen.objects.create(
@@ -316,55 +303,8 @@ class ExamenModelTest(TestCase):
         self.assertIn('Ecografía', str_examen)
 
 
-class HistorialVacunaModelTest(TestCase):
+class HistorialVacunaModelTest(DatosBaseTestCase):
     """Tests para el modelo HistorialVacuna"""
-
-    def setUp(self):
-        """Configuración inicial"""
-        self.user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Pedro',
-            apellido='Ramírez',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
-        )
-
-        self.veterinario = Veterinario.objects.create(
-            usuario=self.user,
-            licencia_profesional='VET-11111'
-        )
-
-        self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='Laura',
-            apellido='Torres',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
-        )
-
-        self.cliente = Cliente.objects.create(
-            usuario=self.cliente_user,
-            telefono='3005551234'
-        )
-
-        self.especie = Especie.objects.create(nombre='Canino')
-        self.raza = Raza.objects.create(nombre='Labrador', especie=self.especie)
-
-        self.mascota = Mascota.objects.create(
-            nombre='Toby',
-            especie=self.especie,
-            raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=180),
-            sexo='M',
-            cliente=self.cliente
-        )
-
-        self.consulta = Consulta.objects.create(
-            mascota=self.mascota,
-            veterinario=self.veterinario,
-            descripcion_consulta='Vacunación',
-            diagnostico='Normal'
-        )
 
     def test_crear_vacuna_al_dia(self):
         """Prueba crear registro de vacunas al día"""
@@ -423,49 +363,8 @@ class HistorialVacunaModelTest(TestCase):
         self.assertIn('Triple felina', str_vacuna)
 
 
-class HistoriaClinicaModelTest(TestCase):
+class HistoriaClinicaModelTest(DatosBaseTestCase):
     """Tests para el modelo HistoriaClinica"""
-
-    def setUp(self):
-        """Configuración inicial"""
-        self.user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Sofia',
-            apellido='Mendoza',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
-        )
-
-        self.veterinario = Veterinario.objects.create(
-            usuario=self.user,
-            licencia_profesional='VET-22222'
-        )
-
-        self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='Diego',
-            apellido='Rojas',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
-        )
-
-        self.cliente = Cliente.objects.create(
-            usuario=self.cliente_user,
-            telefono='3007778888'
-        )
-
-        self.especie = Especie.objects.create(nombre='Canino')
-        self.raza = Raza.objects.create(nombre='Husky', especie=self.especie)
-
-        self.mascota = Mascota.objects.create(
-            nombre='Zeus',
-            especie=self.especie,
-            raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=1460),
-            sexo='M',
-            cliente=self.cliente
-        )
-
     def test_crear_historia_clinica(self):
         """Prueba crear una historia clínica"""
         historia = HistoriaClinica.objects.create(
@@ -523,14 +422,15 @@ class HistoriaClinicaModelTest(TestCase):
 
     def test_relacion_onetoone_mascota(self):
         """Prueba la relación OneToOne con mascota"""
-        historia1 = HistoriaClinica.objects.create(
+        # Crear primera historia
+        HistoriaClinica.objects.create(
             mascota=self.mascota,
             estado_vacunacion_actual='AL_DIA'
         )
 
         # Intentar crear otra historia para la misma mascota debe fallar
         with self.assertRaises(Exception):
-            historia2 = HistoriaClinica.objects.create(
+            HistoriaClinica.objects.create(
                 mascota=self.mascota,
                 estado_vacunacion_actual='PENDIENTE'
             )

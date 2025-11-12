@@ -22,36 +22,33 @@ from usuarios.models import Veterinario, Cliente
 
 User = get_user_model()
 
-
-class ConsultaViewSetTest(TestCase):
-    """Tests para ConsultaViewSet"""
-
+class ViewsBaseTest(TestCase):
     def setUp(self):
         """Configuración inicial"""
         self.client = APIClient()
 
         # Crear veterinario
         self.vet_user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Juan',
-            apellido='Pérez',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
+            username='vet_pedro',
+            email='vet@test.com',
+            nombre='Pedro',
+            apellido='Ramírez',
+            password='testpass123'
         )
 
         self.veterinario = Veterinario.objects.create(
             usuario=self.vet_user,
-            licencia_profesional='VET-12345',
+            licencia='VET-12345',
             especialidad='Medicina General'
         )
 
         # Crear cliente
         self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
+            username='cliente_test',
+            email='cliente@test.com',
             nombre='María',
             apellido='García',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
+            password='testpass123'
         )
 
         self.cliente = Cliente.objects.create(
@@ -70,7 +67,6 @@ class ConsultaViewSetTest(TestCase):
             raza=self.raza,
             fecha_nacimiento=timezone.now().date() - timedelta(days=730),
             sexo='M',
-            color='Dorado',
             cliente=self.cliente
         )
 
@@ -83,13 +79,15 @@ class ConsultaViewSetTest(TestCase):
             notas_adicionales='Dieta blanda por 3 días'
         )
 
+class ConsultaViewSetTest(ViewsBaseTest):
+    """Tests para ConsultaViewSet"""
+
     def test_list_consultas_sin_autenticacion(self):
         """Prueba que lista de consultas requiere autenticación"""
         url = reverse('consulta-list')
         response = self.client.get(url)
 
         # Dependiendo de la configuración de permisos
-        # Puede retornar 401 o 403
         self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
     def test_list_consultas_autenticado_veterinario(self):
@@ -117,7 +115,7 @@ class ConsultaViewSetTest(TestCase):
 
         data = {
             'mascota': self.mascota.id,
-            'veterinario': self.veterinario.id,
+            'veterinario': self.veterinario.usuario.id,
             'descripcion_consulta': 'Control de rutina',
             'diagnostico': 'Mascota saludable',
             'notas_adicionales': 'Todo normal'
@@ -135,7 +133,7 @@ class ConsultaViewSetTest(TestCase):
 
         data = {
             'mascota': self.mascota.id,
-            'veterinario': self.veterinario.id,
+            'veterinario': self.veterinario.usuario.id,
             'descripcion_consulta': '',
             'diagnostico': 'Test'
         }
@@ -151,7 +149,7 @@ class ConsultaViewSetTest(TestCase):
 
         data = {
             'mascota': self.mascota.id,
-            'veterinario': self.veterinario.id,
+            'veterinario': self.veterinario.usuario.id,
             'descripcion_consulta': 'Consulta de prueba',
             'diagnostico': ''
         }
@@ -167,7 +165,7 @@ class ConsultaViewSetTest(TestCase):
 
         data = {
             'mascota': self.mascota.id,
-            'veterinario': self.veterinario.id,
+            'veterinario': self.veterinario.usuario.id,
             'descripcion_consulta': 'Requiere exámenes',
             'diagnostico': 'Pendiente de resultados',
             'examenes': [
@@ -194,7 +192,7 @@ class ConsultaViewSetTest(TestCase):
 
         data = {
             'mascota': self.mascota.id,
-            'veterinario': self.veterinario.id,
+            'veterinario': self.veterinario.usuario.id,
             'descripcion_consulta': 'Plan de vacunación',
             'diagnostico': 'Normal',
             'vacunas': {
@@ -246,75 +244,29 @@ class ConsultaViewSetTest(TestCase):
         for consulta in response.data:
             self.assertEqual(consulta.get('mascota'), self.mascota.id)
 
-    def test_cliente_solo_ve_sus_mascotas(self):
-        """Prueba que el cliente solo ve consultas de sus mascotas"""
-        self.client.force_authenticate(user=self.cliente_user)
+    def test_filtrar_consultas_por_mascota(self):
+        """Prueba filtrar consultas por mascota"""
+        self.client.force_authenticate(user=self.vet_user)
         url = reverse('consulta-list')
+        response = self.client.get(url, {'mascota': self.mascota.id})
 
-        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Dependiendo de la implementación de permisos
-        # El cliente puede ver sus consultas o recibir 200/403
-        self.assertIn(response.status_code, [status.HTTP_200_OK, status.HTTP_403_FORBIDDEN])
+        # Manejar paginación
+        if isinstance(response.data, dict) and 'results' in response.data:
+            consultas = response.data['results']
+        else:
+            consultas = response.data
+
+        self.assertGreater(len(consultas), 0)
+
+        # Verificar que todas son de la mascota correcta
+        for consulta in consultas:
+            self.assertEqual(consulta['mascota'], self.mascota.id)
 
 
-class ExamenViewSetTest(TestCase):
+class ExamenViewSetTest(ViewsBaseTest):
     """Tests para ExamenViewSet"""
-
-    def setUp(self):
-        """Configuración inicial"""
-        self.client = APIClient()
-
-        self.vet_user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Ana',
-            apellido='López',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
-        )
-
-        self.veterinario = Veterinario.objects.create(
-            usuario=self.vet_user,
-            licencia_profesional='VET-98765'
-        )
-
-        self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='Pedro',
-            apellido='Martínez',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
-        )
-
-        self.cliente = Cliente.objects.create(
-            usuario=self.cliente_user,
-            telefono='3009876543'
-        )
-
-        self.especie = Especie.objects.create(nombre='Felino')
-        self.raza = Raza.objects.create(nombre='Persa', especie=self.especie)
-
-        self.mascota = Mascota.objects.create(
-            nombre='Luna',
-            especie=self.especie,
-            raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=1095),
-            sexo='H',
-            cliente=self.cliente
-        )
-
-        self.consulta = Consulta.objects.create(
-            mascota=self.mascota,
-            veterinario=self.veterinario,
-            descripcion_consulta='Requiere diagnóstico',
-            diagnostico='Pendiente de exámenes'
-        )
-
-        self.examen = Examen.objects.create(
-            consulta=self.consulta,
-            tipo_examen='HEMOGRAMA',
-            descripcion='Hemograma completo de rutina'
-        )
 
     def test_list_examenes(self):
         """Prueba listar exámenes"""
@@ -325,122 +277,28 @@ class ExamenViewSetTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
-class HistorialVacunaViewSetTest(TestCase):
+class HistorialVacunaViewSetTest(ViewsBaseTest):
     """Tests para HistorialVacunaViewSet"""
 
-    def setUp(self):
-        """Configuración inicial"""
-        self.client = APIClient()
-
-        self.vet_user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Carlos',
-            apellido='Ramírez',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
-        )
-
-        self.veterinario = Veterinario.objects.create(
-            usuario=self.vet_user,
-            licencia_profesional='VET-55555'
-        )
-
-        self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='Laura',
-            apellido='Torres',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
-        )
-
-        self.cliente = Cliente.objects.create(
-            usuario=self.cliente_user,
-            telefono='3005554321'
-        )
-
-        self.especie = Especie.objects.create(nombre='Canino')
-        self.raza = Raza.objects.create(nombre='Labrador', especie=self.especie)
-
-        self.mascota = Mascota.objects.create(
-            nombre='Toby',
-            especie=self.especie,
-            raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=180),
-            sexo='M',
-            cliente=self.cliente
-        )
-
-        self.consulta = Consulta.objects.create(
-            mascota=self.mascota,
-            veterinario=self.veterinario,
-            descripcion_consulta='Vacunación',
-            diagnostico='Normal'
-        )
+    User.objects.all().delete()
 
     def test_list_vacunas(self):
         """Prueba listar historial de vacunas"""
         self.client.force_authenticate(user=self.vet_user)
-        url = reverse('historialvacuna-list')
+        url = reverse('vacuna-list')
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
 
-class HistoriaClinicaViewSetTest(TestCase):
+class HistoriaClinicaViewSetTest(ViewsBaseTest):
     """Tests para HistoriaClinicaViewSet"""
-
-    def setUp(self):
-        """Configuración inicial"""
-        self.client = APIClient()
-
-        self.vet_user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Sofia',
-            apellido='Mendoza',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
-        )
-
-        self.veterinario = Veterinario.objects.create(
-            usuario=self.vet_user,
-            licencia_profesional='VET-22222'
-        )
-
-        self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='Diego',
-            apellido='Rojas',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
-        )
-
-        self.cliente = Cliente.objects.create(
-            usuario=self.cliente_user,
-            telefono='3007778888'
-        )
-
-        self.especie = Especie.objects.create(nombre='Canino')
-        self.raza = Raza.objects.create(nombre='Husky', especie=self.especie)
-
-        self.mascota = Mascota.objects.create(
-            nombre='Zeus',
-            especie=self.especie,
-            raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=1460),
-            sexo='M',
-            cliente=self.cliente
-        )
-
-        self.historia = HistoriaClinica.objects.create(
-            mascota=self.mascota,
-            estado_vacunacion_actual='AL_DIA'
-        )
 
     def test_list_historias_clinicas(self):
         """Prueba listar historias clínicas"""
         self.client.force_authenticate(user=self.vet_user)
-        url = reverse('historiaclinica-list')
+        url = reverse('historia-clinica-list')
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -448,7 +306,7 @@ class HistoriaClinicaViewSetTest(TestCase):
     def test_retrieve_historia_clinica(self):
         """Prueba obtener detalle de historia clínica"""
         self.client.force_authenticate(user=self.vet_user)
-        url = reverse('historiaclinica-detail', kwargs={'pk': self.historia.pk})
+        url = reverse('historia-clinica-detail', kwargs={'pk': self.historia.pk})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -457,7 +315,7 @@ class HistoriaClinicaViewSetTest(TestCase):
     def test_cliente_puede_ver_su_historia(self):
         """Prueba que el cliente puede ver la historia de su mascota"""
         self.client.force_authenticate(user=self.cliente_user)
-        url = reverse('historiaclinica-detail', kwargs={'pk': self.historia.pk})
+        url = reverse('historia-clinica-detail', kwargs={'pk': self.historia.pk})
         response = self.client.get(url)
 
         # Dependiendo de la implementación de permisos

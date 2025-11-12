@@ -35,34 +35,32 @@ from usuarios.models import Veterinario, Cliente
 
 User = get_user_model()
 
-
-class ConsultaSerializerTest(TestCase):
-    """Tests para los serializers de Consulta"""
+class SerializersBaseTestCase(TestCase):
 
     def setUp(self):
         """Configuración inicial"""
         # Crear usuario veterinario
-        self.vet_user = User.objects.create_user(
-            correo_electronico='vet@test.com',
+        self.vet_user  = User.objects.create_user(
+            username='vet_test',
+            email='vet@test.com',
             nombre='Juan',
             apellido='Pérez',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
+            password='testpass123'
         )
 
         self.veterinario = Veterinario.objects.create(
             usuario=self.vet_user,
-            licencia_profesional='VET-12345',
+            licencia='VET-12345',
             especialidad='Medicina General'
         )
 
         # Crear usuario cliente
         self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
+            username='cliente_test',
+            email='cliente@test.com',
             nombre='María',
             apellido='García',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
+            password='testpass123'
         )
 
         self.cliente = Cliente.objects.create(
@@ -81,7 +79,6 @@ class ConsultaSerializerTest(TestCase):
             raza=self.raza,
             fecha_nacimiento=timezone.now().date() - timedelta(days=730),
             sexo='M',
-            color='Dorado',
             cliente=self.cliente
         )
 
@@ -93,6 +90,10 @@ class ConsultaSerializerTest(TestCase):
             diagnostico='Gastritis aguda',
             notas_adicionales='Dieta blanda por 3 días'
         )
+
+
+class ConsultaSerializerTest(SerializersBaseTestCase):
+    """Tests para los serializers de Consulta"""
 
     def test_consulta_list_serializer(self):
         """Prueba ConsultaListSerializer"""
@@ -131,7 +132,7 @@ class ConsultaSerializerTest(TestCase):
         """Prueba crear consulta con datos válidos"""
         data = {
             'mascota': self.mascota.id,
-            'veterinario': self.veterinario.id,
+            'veterinario': self.veterinario.usuario.id,
             'descripcion_consulta': 'Control de rutina',
             'diagnostico': 'Mascota saludable',
             'notas_adicionales': 'Próxima cita en 6 meses'
@@ -144,7 +145,7 @@ class ConsultaSerializerTest(TestCase):
         """Prueba que falla sin descripción"""
         data = {
             'mascota': self.mascota.id,
-            'veterinario': self.veterinario.id,
+            'veterinario': self.veterinario.usuario.id,
             'descripcion_consulta': '',
             'diagnostico': 'Normal'
         }
@@ -157,7 +158,7 @@ class ConsultaSerializerTest(TestCase):
         """Prueba que falla sin diagnóstico"""
         data = {
             'mascota': self.mascota.id,
-            'veterinario': self.veterinario.id,
+            'veterinario': self.veterinario.usuario.id,
             'descripcion_consulta': 'Control general',
             'diagnostico': ''
         }
@@ -171,7 +172,7 @@ class ConsultaSerializerTest(TestCase):
         """Prueba crear consulta con exámenes anidados"""
         data = {
             'mascota': self.mascota.id,
-            'veterinario': self.veterinario.id,
+            'veterinario': self.veterinario.usuario.id,
             'descripcion_consulta': 'Requiere exámenes',
             'diagnostico': 'Pendiente de resultados',
             'examenes': [
@@ -193,7 +194,7 @@ class ConsultaSerializerTest(TestCase):
         """Prueba crear consulta con historial de vacunas"""
         data = {
             'mascota': self.mascota.id,
-            'veterinario': self.veterinario.id,
+            'veterinario': self.veterinario.usuario.id,
             'descripcion_consulta': 'Plan de vacunación',
             'diagnostico': 'Normal',
             'vacunas': {
@@ -217,55 +218,8 @@ class ConsultaSerializerTest(TestCase):
         self.assertTrue(serializer.is_valid())
 
 
-class HistorialVacunaSerializerTest(TestCase):
+class HistorialVacunaSerializerTest(SerializersBaseTestCase):
     """Tests para serializers de HistorialVacuna"""
-
-    def setUp(self):
-        """Configuración inicial"""
-        self.vet_user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Ana',
-            apellido='López',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
-        )
-
-        self.veterinario = Veterinario.objects.create(
-            usuario=self.vet_user,
-            licencia_profesional='VET-98765'
-        )
-
-        self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='Pedro',
-            apellido='Martínez',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
-        )
-
-        self.cliente = Cliente.objects.create(
-            usuario=self.cliente_user,
-            telefono='3009876543'
-        )
-
-        self.especie = Especie.objects.create(nombre='Canino')
-        self.raza = Raza.objects.create(nombre='Beagle', especie=self.especie)
-
-        self.mascota = Mascota.objects.create(
-            nombre='Rocky',
-            especie=self.especie,
-            raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=365),
-            sexo='M',
-            cliente=self.cliente
-        )
-
-        self.consulta = Consulta.objects.create(
-            mascota=self.mascota,
-            veterinario=self.veterinario,
-            descripcion_consulta='Vacunación',
-            diagnostico='Normal'
-        )
 
     def test_historial_vacuna_serializer(self):
         """Prueba HistorialVacunaSerializer básico"""
@@ -312,56 +266,8 @@ class HistorialVacunaSerializerTest(TestCase):
         self.assertFalse(serializer.is_valid())
 
 
-class ExamenSerializerTest(TestCase):
+class ExamenSerializerTest(SerializersBaseTestCase):
     """Tests para serializers de Examen"""
-
-    def setUp(self):
-        """Configuración inicial"""
-        self.vet_user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Carlos',
-            apellido='Ramírez',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
-        )
-
-        self.veterinario = Veterinario.objects.create(
-            usuario=self.vet_user,
-            licencia_profesional='VET-55555'
-        )
-
-        self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='Laura',
-            apellido='Torres',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
-        )
-
-        self.cliente = Cliente.objects.create(
-            usuario=self.cliente_user,
-            telefono='3005554321'
-        )
-
-        self.especie = Especie.objects.create(nombre='Felino')
-        self.raza = Raza.objects.create(nombre='Siamés', especie=self.especie)
-
-        self.mascota = Mascota.objects.create(
-            nombre='Michi',
-            especie=self.especie,
-            raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=1095),
-            sexo='H',
-            cliente=self.cliente
-        )
-
-        self.consulta = Consulta.objects.create(
-            mascota=self.mascota,
-            veterinario=self.veterinario,
-            descripcion_consulta='Requiere diagnóstico',
-            diagnostico='Pendiente de exámenes'
-        )
-
     def test_examen_serializer(self):
         """Prueba ExamenSerializer básico"""
         examen = Examen.objects.create(

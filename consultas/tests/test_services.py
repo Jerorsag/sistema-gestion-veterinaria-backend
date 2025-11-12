@@ -20,62 +20,57 @@ from usuarios.models import Veterinario, Cliente
 
 User = get_user_model()
 
-
-class ConsultaServiceTest(TestCase):
-    """Tests para los servicios de Consulta"""
-
+class ServicesBaseTastCase(TestCase):
     def setUp(self):
         """Configuración inicial"""
-        # Crear veterinario
-        self.vet_user = User.objects.create_user(
-            correo_electronico='vet@test.com',
+        self.vet_user  = User.objects.create_user(
+            username='vet_test',
+            email='vet@test.com',
             nombre='Juan',
             apellido='Pérez',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
+            password='testpass123'
         )
 
         self.veterinario = Veterinario.objects.create(
             usuario=self.vet_user,
-            licencia_profesional='VET-12345'
+            licencia='VET-98765'
         )
 
-        # Crear cliente
         self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='María',
-            apellido='García',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
+            username='cliente_carlos',
+            email='cliente@test.com',
+            nombre='Carlos',
+            apellido='Martínez',
+            password='testpass123'
         )
 
         self.cliente = Cliente.objects.create(
             usuario=self.cliente_user,
-            telefono='3001234567',
-            direccion='Calle 123 #45-67'
+            telefono='3009876543',
+            direccion='Carrera 45 #12-34'
         )
 
-        # Crear especie, raza y mascota
-        self.especie = Especie.objects.create(nombre='Canino')
-        self.raza = Raza.objects.create(nombre='Golden Retriever', especie=self.especie)
+        self.especie = Especie.objects.create(nombre='Felino')
+        self.raza = Raza.objects.create(nombre='Persa', especie=self.especie)
 
         self.mascota = Mascota.objects.create(
-            nombre='Max',
+            nombre='Luna',
             especie=self.especie,
             raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=730),
-            sexo='M',
-            color='Dorado',
+            fecha_nacimiento=timezone.now().date() - timedelta(days=1095),
+            sexo='H',
             cliente=self.cliente
         )
 
-        # Crear consulta
         self.consulta = Consulta.objects.create(
             mascota=self.mascota,
             veterinario=self.veterinario,
-            descripcion_consulta='Control de rutina',
-            diagnostico='Saludable'
+            descripcion_consulta='Revisión general',
+            diagnostico='Normal'
         )
+
+class ConsultaServiceTest(ServicesBaseTastCase):
+    """Tests para los servicios de Consulta"""
 
     def test_get_estado_vacunacion_consulta_sin_vacunas(self):
         """Prueba obtener estado de vacunación cuando no hay registro"""
@@ -128,112 +123,44 @@ class ConsultaServiceTest(TestCase):
         self.assertIn(estado, ["Pendiente", "Al día"])
 
 
-class DatosPersonalesServiceTest(TestCase):
+class DatosPersonalesServiceTest(ServicesBaseTastCase):
     """Tests para el servicio get_datos_personales"""
-
-    def setUp(self):
-        """Configuración inicial"""
-        self.vet_user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Ana',
-            apellido='López',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
-        )
-
-        self.veterinario = Veterinario.objects.create(
-            usuario=self.vet_user,
-            licencia_profesional='VET-98765'
-        )
-
-        self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='Pedro',
-            apellido='Martínez',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
-        )
-
-        self.cliente = Cliente.objects.create(
-            usuario=self.cliente_user,
-            telefono='3009876543',
-            direccion='Carrera 45 #12-34'
-        )
-
-        self.especie = Especie.objects.create(nombre='Felino')
-        self.raza = Raza.objects.create(nombre='Persa', especie=self.especie)
-
-        self.mascota = Mascota.objects.create(
-            nombre='Luna',
-            especie=self.especie,
-            raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=1095),
-            sexo='H',
-            color='Blanco',
-            cliente=self.cliente
-        )
-
-        self.consulta = Consulta.objects.create(
-            mascota=self.mascota,
-            veterinario=self.veterinario,
-            descripcion_consulta='Revisión general',
-            diagnostico='Normal'
-        )
 
     def test_datos_personales_desde_serializer(self):
         """Prueba obtener datos personales usando el serializer"""
+        datos = get_datos_personales(self.consulta)
+
+        self.assertIsNotNone(datos)
+        self.assertIsInstance(datos, dict)
+        self.assertIn('nombre', datos)
+        self.assertIn('telefono', datos)
+        self.assertIn('direccion', datos)
 
     def test_datos_personales_incluye_nombre_completo_cliente(self):
         """Prueba que incluye el nombre completo del cliente"""
+        datos = get_datos_personales(self.consulta)
+
+        # El nombre debe contener el nombre y apellido del cliente
+        nombre = datos.get('nombre', '')
+        self.assertIn('Carlos', nombre)
+        self.assertIn('Martínez', nombre)
 
     def test_datos_personales_incluye_telefono(self):
         """Prueba que incluye el teléfono del cliente"""
+        datos = get_datos_personales(self.consulta)
+
+        telefono = datos.get('telefono')
+        self.assertEqual(telefono, '3009876543')
 
     def test_datos_personales_incluye_direccion(self):
         """Prueba que incluye la dirección del cliente"""
+        datos = get_datos_personales(self.consulta  )
 
-class VacunacionIntegrationTest(TestCase):
+        direccion = datos.get('direccion')
+        self.assertEqual(direccion, 'Carrera 45 #12-34')
+
+class VacunacionIntegrationTest(ServicesBaseTastCase):
     """Tests de integración para el flujo completo de vacunación"""
-
-    def setUp(self):
-        """Configuración inicial"""
-        self.vet_user = User.objects.create_user(
-            correo_electronico='vet@test.com',
-            nombre='Carlos',
-            apellido='Ramírez',
-            password='testpass123',
-            tipo_usuario='VETERINARIO'
-        )
-
-        self.veterinario = Veterinario.objects.create(
-            usuario=self.vet_user,
-            licencia_profesional='VET-55555'
-        )
-
-        self.cliente_user = User.objects.create_user(
-            correo_electronico='cliente@test.com',
-            nombre='Laura',
-            apellido='Torres',
-            password='testpass123',
-            tipo_usuario='CLIENTE'
-        )
-
-        self.cliente = Cliente.objects.create(
-            usuario=self.cliente_user,
-            telefono='3005554321'
-        )
-
-        self.especie = Especie.objects.create(nombre='Canino')
-        self.raza = Raza.objects.create(nombre='Labrador', especie=self.especie)
-
-        self.mascota = Mascota.objects.create(
-            nombre='Toby',
-            especie=self.especie,
-            raza=self.raza,
-            fecha_nacimiento=timezone.now().date() - timedelta(days=180),
-            sexo='M',
-            cliente=self.cliente
-        )
 
     def test_flujo_completo_vacunacion_pendiente_a_al_dia(self):
         """Prueba el flujo completo de cambiar estado de vacunación"""
