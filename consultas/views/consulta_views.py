@@ -41,9 +41,7 @@ class ConsultaViewSet(viewsets.ModelViewSet):
     ordering = ['-fecha_consulta']
 
     def get_serializer_class(self):
-        """
-        Retorna el serializer apropiado según la acción.
-        """
+        """ Retorna el serializer apropiado según la acción."""
         if self.action == 'list':
             return ConsultaListSerializer
         elif self.action == 'retrieve':
@@ -55,10 +53,7 @@ class ConsultaViewSet(viewsets.ModelViewSet):
         return ConsultaSerializer
 
     def get_queryset(self):
-        """
-        Filtra las consultas según el rol del usuario.
-        Prioridad: Admin > Veterinario > Cliente
-        """
+        """ Filtra las consultas según el rol del usuario."""
         user = self.request.user
         queryset = super().get_queryset()
 
@@ -80,9 +75,7 @@ class ConsultaViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        """
-        Guarda la consulta asignando automáticamente el veterinario actual.
-        """
+        """ Guarda la consulta asignando automáticamente el veterinario actual. """
         if hasattr(user, "perfil_veterinario") and user.perfil_veterinario is not None:
             serializer.save(veterinario=user.perfil_veterinario)
         else:

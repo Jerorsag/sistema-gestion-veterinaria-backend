@@ -16,7 +16,6 @@ class ExamenViewSet(viewsets.ReadOnlyModelViewSet):
     """
     para gestión de exámenes médicos.
     """
-
     queryset = Examen.objects.all().select_related('consulta')
     serializer_class = ExamenSerializer
     permission_classes = [IsAuthenticated]
@@ -34,10 +33,7 @@ class ExamenViewSet(viewsets.ReadOnlyModelViewSet):
         return ExamenSerializer
 
     def get_queryset(self):
-        """
-        Filtra exámenes según permisos del usuario.
-        Prioridad: Admin > Veterinario/Practicante > Cliente
-        """
+        """ Filtra exámenes según permisos del usuario."""
         user = self.request.user
         queryset = super().get_queryset()
 
@@ -59,9 +55,7 @@ class ExamenViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='consulta/(?P<consulta_id>[^/.]+)')
     def por_consulta(self, request, consulta_id=None):
-        """
-        Retorna todos los exámenes de una consulta.
-        """
+        """Retorna todos los exámenes de una consulta."""
         examenes = self.get_queryset().filter(consulta_id=consulta_id)
         serializer = self.get_serializer(examenes, many=True)
         return Response(serializer.data)

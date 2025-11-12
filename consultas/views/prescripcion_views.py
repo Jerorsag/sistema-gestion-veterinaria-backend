@@ -20,7 +20,6 @@ class PrescripcionViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Integración con Inventario: Valida stock disponible antes de crear, Descuenta automáticamente del inventario (via signal), Genera alertas si el stock es bajo
     """
-
     queryset = Prescripcion.objects.all().select_related(
         'consulta',
         'medicamento'  # Sigue siendo el campo FK → Producto
@@ -40,10 +39,7 @@ class PrescripcionViewSet(viewsets.ReadOnlyModelViewSet):
         return PrescripcionSerializer
 
     def get_queryset(self):
-        """
-        Filtra prescripciones según permisos del usuario.
-        Prioridad: Admin > Veterinario/Practicante > Cliente
-        """
+        """ Filtra prescripciones según permisos del usuario."""
         user = self.request.user
         queryset = super().get_queryset()
 
@@ -65,27 +61,21 @@ class PrescripcionViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='consulta/(?P<consulta_id>[^/.]+)')
     def por_consulta(self, request, consulta_id=None):
-        """
-        Retorna todas las prescripciones de una consulta.
-        """
+        """ Retorna todas las prescripciones de una consulta."""
         prescripciones = self.get_queryset().filter(consulta_id=consulta_id)
         serializer = PrescripcionSerializer(prescripciones, many=True, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'], url_path='producto/(?P<producto_id>[^/.]+)')
     def por_producto(self, request, producto_id=None):
-        """
-        Retorna todas las veces que se ha prescrito un producto.
-        """
+        """ Retorna todas las veces que se ha prescrito un producto."""
         prescripciones = self.get_queryset().filter(medicamento_id=producto_id)
         serializer = PrescripcionListSerializer(prescripciones, many=True, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def mas_prescritos(self, request):
-        """
-        Retorna los productos más prescritos.
-        """
+        """ Retorna los productos más prescritos."""
         from django.db.models import Count, Sum
 
         mas_prescritos = self.get_queryset().values(
