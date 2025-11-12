@@ -1,5 +1,3 @@
-# apps/consultas/serializers/historia_clinica_serializers.py
-
 """
 Serializers para el modelo HistoriaClinica.
 Implementa el COMPOSITE PATTERN.
@@ -68,12 +66,10 @@ class HistoriaClinicaDetalleSerializer(serializers.ModelSerializer):
     """
     Serializer detallado para Historia Clínica consolidada.
     """
-    # Datos de la mascota (Composite root)
+    # Datos de la mascota y paciente (Composite root)
     mascota_datos = serializers.SerializerMethodField(
         help_text="Datos completos de la mascota"
     )
-
-    # Propietario
     propietario = serializers.SerializerMethodField(
         help_text="Datos del propietario de la mascota"
     )
@@ -86,11 +82,6 @@ class HistoriaClinicaDetalleSerializer(serializers.ModelSerializer):
     # Estadísticas generales
     estadisticas = serializers.SerializerMethodField(
         help_text="Estadísticas generales de la historia clínica"
-    )
-
-    # Medicamentos más frecuentes
-    medicamentos_frecuentes = serializers.SerializerMethodField(
-        help_text="Top 5 medicamentos más prescritos"
     )
 
     class Meta:
@@ -179,39 +170,11 @@ class HistoriaClinicaDetalleSerializer(serializers.ModelSerializer):
             'ultima_consulta': ultima_consulta.fecha_consulta if ultima_consulta else None,
         }
 
-    def get_medicamentos_frecuentes(self, obj):
-        """
-        Retorna los 5 medicamentos más prescritos en la historia de esta mascota.
-        """
-        try:
-            from consultas.models import Prescripcion
-
-            # Obtener todas las prescripciones de las consultas de esta mascota
-            medicamentos = Prescripcion.objects.filter(
-                consulta__mascota=obj.mascota
-            ).values(
-                'medicamento__descripcion'
-            ).annotate(
-                veces_prescrito=Count('id')
-            ).order_by('-veces_prescrito')[:5]
-
-            return [
-                {
-                    'medicamento': med['medicamento__descripcion'],
-                    'veces_prescrito': med['veces_prescrito']
-                }
-                for med in medicamentos
-            ]
-        except Exception:
-            # Si no existe el modelo Prescripcion o hay algún error
-            return []
-
 
 class UltimaConsultaSerializer(serializers.Serializer):
     """
     Serializer para la vista "Ver Ultima Historia Clinica".
     """
-
     mascota_nombre = serializers.CharField()
     propietario_nombre = serializers.CharField()
     ultima_consulta = ConsultaDetailSerializer()

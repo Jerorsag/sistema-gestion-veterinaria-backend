@@ -1,5 +1,3 @@
-# apps/consultas/serializers/examen_serializers.py
-
 """
 Serializers para el modelo Examen.
 """
@@ -12,13 +10,11 @@ class ExamenSerializer(serializers.ModelSerializer):
     """
     Serializer para exámenes médicos ordenados.
     """
-
     tipo_examen_display = serializers.CharField(
         source='get_tipo_examen_display',
         read_only=True,
         help_text="Nombre legible del tipo de examen"
     )
-
     class Meta:
         model = Examen
         fields = [
@@ -34,7 +30,7 @@ class ExamenSerializer(serializers.ModelSerializer):
 
 class ExamenCreateSerializer(serializers.ModelSerializer):
     """
-    Serializer para crear exámenes (usado en nested create).
+    Serializer para crear exámenes.
     """
     class Meta:
         model = Examen

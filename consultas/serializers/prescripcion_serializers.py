@@ -22,7 +22,7 @@ class PrescripcionListSerializer(serializers.ModelSerializer):
         model = Prescripcion
         fields = [
             'id',
-            'medicamento',  # Este campo sigue llamándose así en el modelo
+            'medicamento',
             'producto_nombre',
             'cantidad',
             'indicaciones',
@@ -30,7 +30,7 @@ class PrescripcionListSerializer(serializers.ModelSerializer):
 
 class PrescripcionSerializer(serializers.ModelSerializer):
     """
-    Incluye información detallada del producto (medicamento) completo para lectura de prescripciones.
+    Incluye información detallada del producto completo para lectura de prescripciones.
     """
     producto_nombre = serializers.CharField(
         source=MEDICAMENTO_descripcion,
@@ -52,7 +52,7 @@ class PrescripcionSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'consulta',
-            'medicamento',  # FK → Producto
+            'medicamento',
             'producto_nombre',
             'producto_descripcion',
             'cantidad',
@@ -67,7 +67,6 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
     """
     Serializer para crear prescripciones.
     """
-
     producto_nombre = serializers.CharField(
         source=MEDICAMENTO_descripcion,
         read_only=True
@@ -81,7 +80,7 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prescripcion
         fields = [
-            'medicamento',  # FK → Producto
+            'medicamento',
             'producto_nombre',
             'cantidad',
             'stock_disponible',
@@ -104,16 +103,15 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
 
         return value
 
+    #Valida que la cantidad sea al menos 1
     def validate_cantidad(self, value):
-        """Valida que la cantidad sea al menos 1"""
         if value < 1:
             raise serializers.ValidationError("La cantidad debe ser al menos 1")
         return value
 
+    #Valida que el inventario contenga suficiente stock del mediccamento prescripto.
     def validate(self, data):
-        """
-        Validación cruzada: producto vs cantidad.
-        """
+
         producto = data.get('medicamento')
         cantidad = data.get('cantidad')
 

@@ -1,5 +1,3 @@
-# apps/consultas/serializers/consulta_serializers.py
-
 """
 Serializers para el modelo Consulta.
 Representa el formulario completo "Crear Historias Clínicas".
@@ -18,16 +16,15 @@ from .examen_serializers import ExamenSerializer, ExamenCreateSerializer
 from .vacuna_serializers import HistorialVacunaSerializer, HistorialVacunaCreateSerializer
 
 User = get_user_model()
+VETERINARIO_GET = 'veterinario.usuario.get_full_name';
 
-VETERINARIO_GET = 'veterinario.get_full_name';
 class ConsultaListSerializer(serializers.ModelSerializer):
     """
     Serializer simplificado para listar consultas.
     """
-
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
     veterinario_nombre = serializers.CharField(
-        source='veterinario.get_full_name',
+        source='veterinario.usuario.get_full_name',
         read_only=True
     )
     estado_vacunacion = serializers.SerializerMethodField()
@@ -37,6 +34,7 @@ class ConsultaListSerializer(serializers.ModelSerializer):
         model = Consulta
         fields = [
             'id',
+            'mascota',
             'mascota_nombre',
             'veterinario_nombre',
             'fecha_consulta',
@@ -109,8 +107,6 @@ class ConsultaCreateSerializer(serializers.ModelSerializer):
     """
     Serializer para crear una consulta completa.
     """
-
-    # Nested serializers para crear en una sola petición
     prescripciones = PrescripcionCreateSerializer(many=True, required=False)
     examenes = ExamenCreateSerializer(many=True, required=False)
     vacunas = HistorialVacunaCreateSerializer(required=False)
@@ -129,24 +125,20 @@ class ConsultaCreateSerializer(serializers.ModelSerializer):
             'vacunas',
         ]
 
+    #Valida que la mascota este registrada en el sistema
     def validate_mascota(self, value):
-        """Valida que la mascota exista"""
         if not Mascota.objects.filter(pk=value.pk).exists():
             raise serializers.ValidationError("La mascota seleccionada no existe")
         return value
 
+    #Valida que el campo descripcion no este vacio
     def validate_descripcion_consulta(self, value):
-        """
-        Valida que la descripción no esté vacía."
-        """
         if not value or value.strip() == '':
             raise serializers.ValidationError("La descripción de la consulta es obligatoria")
         return value
 
+    #Valida que el campo Diagnostico no este vacio
     def validate_diagnostico(self, value):
-        """
-        Valida que el diagnóstico no esté vacío.
-        """
         if not value or value.strip() == '':
             raise serializers.ValidationError("Debe ingresar un diagnóstico")
         return value
@@ -155,7 +147,6 @@ class ConsultaCreateSerializer(serializers.ModelSerializer):
         """
         Crea la consulta con todas sus relaciones anidadas.
         """
-
         prescripciones_data = validated_data.pop('prescripciones', [])
         examenes_data = validated_data.pop('examenes', [])
         vacunas_data = validated_data.pop('vacunas', None)
@@ -193,7 +184,6 @@ class ConsultaCreateSerializer(serializers.ModelSerializer):
 class ConsultaUpdateSerializer(serializers.ModelSerializer):
     """
        Serializer para actualizar una consulta completa con sus relaciones anidadas.
-        Permite actualizar prescripciones, exámenes y vacunas en una sola petición.
     """
     prescripciones = PrescripcionCreateSerializer(many=True, required=False)
     examenes = ExamenCreateSerializer(many=True, required=False)
@@ -212,16 +202,16 @@ class ConsultaUpdateSerializer(serializers.ModelSerializer):
             'examenes',
             'vacunas',
         ]
-        read_only_fields = ['mascota']  # No se puede cambiar la mascota de una consulta
+        read_only_fields = ['mascota']
 
+    #Valida que la consulta no este vacia
     def validate_descripcion_consulta(self, value):
-        """Valida que la descripción no esté vacía."""
         if not value or value.strip() == '':
             raise serializers.ValidationError("La descripción de la consulta es obligatoria")
         return value
 
+    #Valida que el diagnostico no este vacio cuando se quiera actualizar
     def validate_diagnostico(self, value):
-        """Valida que el diagnóstico no esté vacío."""
         if not value or value.strip() == '':
             raise serializers.ValidationError("Debe ingresar un diagnóstico")
         return value
@@ -230,7 +220,6 @@ class ConsultaUpdateSerializer(serializers.ModelSerializer):
         """
         Actualiza la consulta y sus relaciones anidadas.
         """
-        # Extraer datos anidados
         prescripciones_data = validated_data.pop('prescripciones', None)
         examenes_data = validated_data.pop('examenes', None)
         vacunas_data = validated_data.pop('vacunas', None)
@@ -240,36 +229,36 @@ class ConsultaUpdateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
 
-        # Actualizar prescripciones si se proporcionaron
+        # Actualizar prescripciones si se agregan otro medicamento
         if prescripciones_data is not None:
-            # Eliminar prescripciones existentes
+            # Eliminar prescripciones realizadas antes de hacer la actualizacion
             instance.prescripciones.all().delete()
 
-            # Crear nuevas prescripciones
+            # Crear nuevas prescripciones con la actualizacion realiazada
             for prescripcion_data in prescripciones_data:
                 Prescripcion.objects.create(
                     consulta=instance,
                     **prescripcion_data
                 )
 
-        # Actualizar exámenes si se proporcionaron
+        # Actualizar exámenes si se agrego un examen
         if examenes_data is not None:
-            # Eliminar exámenes existentes
+            # Eliminar exámenes que estaban antes de realizar la actualizacion
             instance.examenes.all().delete()
 
-            # Crear nuevos exámenes
+            # Crear nuevos exámenes con los datos actualizados
             for examen_data in examenes_data:
                 Examen.objects.create(
                     consulta=instance,
                     **examen_data
                 )
 
-        # Actualizar vacunas si se proporcionaron
+        # Actualizar vacunas si se actualiza el estado o el campo de descripcion de vacunas
         if vacunas_data is not None:
-            # Eliminar registro de vacunas existente
+            # Eliminar registro de vacunas que estaban antes de realizar la actualizacion
             instance.vacunas.all().delete()
 
-            # Crear nuevo registro de vacunas
+            # Crear nuevo registro de vacunas con los campos actualizados
             HistorialVacuna.objects.create(
                 consulta=instance,
                 **vacunas_data
@@ -284,9 +273,7 @@ class ConsultaUpdateSerializer(serializers.ModelSerializer):
 class ConsultaSerializer(serializers.ModelSerializer):
     """
     Serializer general para Consulta.
-    Usado para operaciones básicas de lectura/escritura.
     """
-
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
     veterinario_nombre = serializers.CharField(
         source=VETERINARIO_GET,
