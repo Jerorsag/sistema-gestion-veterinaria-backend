@@ -18,7 +18,6 @@ def get_datos_personales(consulta):
         'estado_vacunacion': mascota.estado_vacunacion,
     }
 
-
 def get_estado_vacunacion_consulta(consulta):
     """
     Retorna el estado de vacunación registrado en esta consulta.

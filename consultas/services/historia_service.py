@@ -11,7 +11,6 @@ from consultas.patterns.builder import HistoriaClinicaBuilder
 def gestionar_historia_clinica(consulta):
     """
     Crea automáticamente una HistoriaClinica si no existe
-    y actualiza el estado de vacunación con base en la consulta.
     """
     historia, _ = HistoriaClinica.objects.get_or_create(mascota=consulta.mascota)
 
