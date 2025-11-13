@@ -115,7 +115,7 @@ def logout_view(request):
                 {'detail': 'Se requiere el refresh token.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    except Exception as e:
+    except Exception as _:
         return Response(
             {'detail': 'Token inválido o ya expirado.'},
             status=status.HTTP_400_BAD_REQUEST

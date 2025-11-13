@@ -211,7 +211,10 @@ class Veterinario(models.Model):
         verbose_name_plural = 'Veterinarios'
     
     def __str__(self):
-        return f"Dr(a). {self.usuario.get_full_name()}"
+        nombre = self.usuario.get_full_name().strip() if self.usuario else "Sin nombre"
+        if nombre:
+            return f"Dr(a). {nombre}"
+        return f"Dr(a). {self.especialidad or 'Veterinario/a'}"
 
 
 class Practicante(models.Model):

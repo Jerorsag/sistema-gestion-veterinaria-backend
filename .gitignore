@@ -1,12 +1,3 @@
-# ========================================
-# ARCHIVOS Y CARPETAS DE PYTHON
-# ========================================
-__pycache__/
-*.py[cod]
-*$py.class
-*.pyo
-
-# Entornos virtuales
 venv/
 env/
 ENV/
@@ -19,16 +10,6 @@ ENV/
 *.pyc
 *.pyo
 *.pyd
-*.sqlite3
-*.db
-*.bak
-
-# ========================================
-# DJANGO
-# ========================================
-# Archivos de migraciones compiladas
-*/migrations/__pycache__/
-*/migrations/*.py[cod]
 
 # Base de datos SQLite local
 db.sqlite3
@@ -47,57 +28,10 @@ db.sqlite3-journal
 # ========================================
 # PyCharm
 .idea/
-*.iml
-
-# VSCode
 .vscode/
-.history/
 
-# ========================================
-# SISTEMA / SO
-# ========================================
-# macOS
 .DS_Store
-
-# Windows
 Thumbs.db
-ehthumbs.db
-Desktop.ini
 
-# ========================================
-# ARCHIVOS DE DEPLOY O CI/CD
-# ========================================
-# PythonAnywhere / Docker / Otros
-*.pid
-*.seed
-*.pid.lock
-celerybeat-schedule
-celerybeat.pid
 
-# ========================================
-# ARCHIVOS DE TEST / COVERAGE
-# ========================================
-htmlcov/
-.tox/
-.nox/
-.coverage
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-nosetests.xml
-test-results/
-junit.xml
-.coverage.*
 
-# ========================================
-# DOCUMENTACIÓN / TEMPORALES
-# ========================================
-*.log
-*.tmp
-*.swp
-*.swo
-*.bak
-*.orig
-*.save
