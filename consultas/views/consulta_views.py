@@ -111,15 +111,6 @@ class ConsultaViewSet(viewsets.ModelViewSet):
         serializer = ConsultaListSerializer(consultas, many=True, context={'request': request})
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'])
-    def datos_personales(self, request, pk=None):
-        """
-        Retorna los datos personales de la mascota de esta consulta.
-        """
-        consulta = self.get_object()
-        datos = consulta.get_datos_personales()
-        return Response(datos)
-
     @action(detail=False, methods=['get'])
     def estadisticas(self, request):
         """
