@@ -2,11 +2,8 @@
 from rest_framework import serializers
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, PermissionDenied 
-from ..services import (
-    agendar_nueva_cita, 
-    reagendar_cita
-)
-
+from ..services import agendar_nueva_cita,  reagendar_cita
+from ..models import Cita,Servicio
 from citas.patterns.state import EstadoCita
 
 
@@ -71,3 +68,12 @@ class ReagendarCitaSerializer(serializers.Serializer):
             raise e
         except Exception as e:
             raise serializers.ValidationError(f"Error inesperado al reagendar: {e}")
+        
+class ServicioWriteSerializer(serializers.ModelSerializer):
+    """
+    Serializer para CREAR (POST) y ACTUALIZAR (PUT/PATCH) Servicios.
+    """
+    class Meta:
+        model = Servicio
+        # Solo los campos que queremos que se puedan crear/editar
+        fields = ['nombre', 'costo']
