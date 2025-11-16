@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'consultas',
     'inventario',
     'citas',
+    'notificaciones',
 ]
 
 # Custom User Model

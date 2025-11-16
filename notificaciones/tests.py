@@ -29,6 +29,7 @@ class NotificacionesHandlersTests(TestCase):
 
         self.vet_user = Usuario.objects.create_user(
             username='vet_test_email', 
+            email='veterinario@test.com',
             password='password123', 
             nombre="Dr.", 
             apellido="Test"
@@ -59,8 +60,9 @@ class NotificacionesHandlersTests(TestCase):
 
     # --- NUEVA PRUEBA ---
     # Interceptamos el servicio que realmente envía el correo
-    @patch('notificaciones.services.enviar_notificacion_generica')
-    def t_handler_de_cita_agendada_llama_al_servicio(self, mock_enviar_notificacion):
+    @patch('notificaciones.handlers.handler_cita.enviar_notificacion_generica')
+    def test_handler_de_cita_agendada_llama_al_servicio(self, mock_enviar_notificacion):
+        
         """
         Prueba que 'handler_cita.py' recibe la señal 
         y llama al servicio de notificaciones.
