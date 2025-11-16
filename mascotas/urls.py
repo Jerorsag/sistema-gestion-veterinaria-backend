@@ -8,6 +8,6 @@ from mascotas.views.mascota_views import (
 
 urlpatterns = [
     path('mascotas/', MascotaListCreateView.as_view(), name='mascotas-list-create'),
-    # Models use UUID primary keys (BaseModel.id is a UUIDField). Use the uuid converter so DRF views receive UUIDs.
-    path('mascotas/<uuid:pk>/', MascotaRetrieveUpdateDeleteView.as_view(), name='mascota-detail'),
+    # Use integer primary keys (BaseModel.id es BigAutoField en este proyecto).
+    path('mascotas/<int:pk>/', MascotaRetrieveUpdateDeleteView.as_view(), name='mascota-detail'),
 ]
