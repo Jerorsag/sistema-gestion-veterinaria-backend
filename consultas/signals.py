@@ -19,7 +19,6 @@ def crear_o_actualizar_historia(sender, instance, created, **kwargs):
     Al crear una consulta, crea o actualiza automáticamente la historia clínica.
     """
     if created:
-        print(f"Nueva consulta creada: {instance.id}")
         gestionar_historia_clinica(instance)
 
 
@@ -45,9 +44,7 @@ def actualizar_inventario_post_save(sender, instance, created, **kwargs):
         )
         # Marcar como procesado para evitar duplicados
         instance._stock_actualizado = True
-        print(f"✓ Stock descontado correctamente para {instance.medicamento.descripcion}")
     except Exception as e:
-        print(f"✗ Error al descontar stock: {e}")
         raise  # Re-lanzar para que no se guarde la prescripción si falla
 
 
@@ -61,9 +58,7 @@ def restaurar_stock_al_eliminar_prescripcion(sender, instance, **kwargs):
             instance,
             detalle=f"Devolución automática por eliminación de prescripción (Consulta #{instance.consulta.id})"
         )
-        print(f"✓ Stock restaurado para {instance.medicamento.descripcion}")
     except Exception as e:
-        print(f"✗ Error al restaurar stock: {e}")
         raise
 
 

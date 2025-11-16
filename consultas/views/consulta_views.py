@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 
 from consultas.models import Consulta
 from consultas.serializers.consulta_serializers import (
@@ -86,19 +86,46 @@ class ConsultaViewSet(viewsets.ModelViewSet):
         """
         Retorna todas las consultas de una mascota específica.
         """
+        from mascotas.models import Mascota
+
+        # Verificar que la mascota exista
+        try:
+            mascota = Mascota.objects.get(id=mascota_id)
+        except Mascota.DoesNotExist:
+            return Response(
+                {'detail': 'Mascota no encontrada'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # ✅ CORRECCIÓN: Verificar PRIMERO si es veterinario/admin
+        user = request.user
+
+        # Admins pueden ver todo
+        if user.is_staff:
+            pass  # Continuar sin restricciones
+
+        # Veterinarios y practicantes pueden ver todo
+        elif hasattr(user, 'perfil_veterinario') or hasattr(user, 'perfil_practicante'):
+            pass  # Continuar sin restricciones
+
+        # Clientes solo pueden ver sus propias mascotas
+        elif hasattr(user, 'perfil_cliente'):
+            cliente = user.perfil_cliente
+            if mascota.cliente != cliente:
+                return Response(
+                    {'detail': 'No tiene permiso para ver las consultas de esta mascota'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        # Usuario sin rol: denegar acceso
+        else:
+            return Response(
+                {'detail': 'No tiene permisos suficientes'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Obtener consultas de la mascota
         consultas = self.get_queryset().filter(mascota_id=mascota_id)
-
-        # Verificar permisos: el propietario solo puede ver sus mascotas
-        if consultas.exists():
-            primera_consulta = consultas.first()
-            if hasattr(request.user, 'perfil_cliente'):
-                cliente = request.user.perfil_cliente
-                if primera_consulta.mascota.cliente != cliente:
-                    return Response(
-                        {'detail': 'No tiene permiso para ver las consultas de esta mascota'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-
         serializer = ConsultaListSerializer(consultas, many=True, context={'request': request})
         return Response(serializer.data)
 
@@ -135,3 +162,19 @@ class ConsultaViewSet(viewsets.ModelViewSet):
             'total_consultas': total,
             'consultas_por_mes': list(por_mes)
         })
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Solo veterinarios y admins pueden eliminar consultas.
+        Los clientes NO pueden eliminar.
+        """
+        user = request.user
+
+        # Si es cliente, denegar
+        if hasattr(user, 'perfil_cliente') or hasattr(user, 'cliente'):
+            raise PermissionDenied(
+                "Los clientes no tienen permiso para eliminar consultas."
+            )
+
+        # Veterinarios y admins sí pueden
+        return super().destroy(request, *args, **kwargs)

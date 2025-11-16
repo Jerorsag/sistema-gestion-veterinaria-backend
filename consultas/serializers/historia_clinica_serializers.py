@@ -96,7 +96,6 @@ class HistoriaClinicaDetalleSerializer(serializers.ModelSerializer):
             'estado_vacunacion_actual',
             'consultas',
             'estadisticas',
-            'medicamentos_frecuentes',
         ]
         read_only_fields = ['id', 'fecha_creacion', 'fecha_actualizacion']
 
