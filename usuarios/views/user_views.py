@@ -103,7 +103,12 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         # `permission_classes` al método correspondiente.
         action_name = getattr(self, 'action', None)
         if action_name:
-            action_func = getattr(self, action_name, None)
+            # El decorador @action añade `permission_classes` a la función
+            # definida en la clase (la función no enlazada). Cuando se obtiene
+            # el atributo desde la instancia se obtiene un método enlazado y
+            # puede que la metadata no sea visible directamente. Por eso
+            # comprobamos primero en la función del atributo de la clase.
+            action_func = getattr(self.__class__, action_name, None)
             if action_func is not None and hasattr(action_func, 'permission_classes'):
                 return [perm() for perm in getattr(action_func, 'permission_classes')]
 
@@ -133,15 +138,38 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOwnerOrAdmin])
     def cambiar_password(self, request, pk=None):
-        """Permite al usuario cambiar su contraseña."""
-        usuario = self.get_object()
+        """
+        Permite al usuario cambiar su contraseña.
+        
+        Solo el propietario del usuario o un administrador pueden cambiar la contraseña.
+        El permiso IsOwnerOrAdmin se verifica automáticamente por DRF en get_object().
+        
+        Nota: El serializer valida password_actual contra request.user:
+        - Si el usuario cambia su propia contraseña: debe proporcionar su propia contraseña actual
+        - Si un administrador cambia la contraseña de otro usuario: debe proporcionar su propia contraseña (del admin)
+        
+        Verificamos permisos explícitamente antes de validar el serializer para asegurar
+        que se devuelva 403 (FORBIDDEN) en lugar de 400 (BAD REQUEST) cuando el usuario
+        no tiene permisos para cambiar la contraseña de otro usuario.
+        """
+        usuario = self.get_object()  # Obtiene el usuario objetivo
+        
+        # Verificar permisos explícitamente antes de validar el serializer
+        # Esto asegura que se devuelva 403 en lugar de 400 cuando no hay permisos
+        permiso = IsOwnerOrAdmin()
+        if not permiso.has_object_permission(request, self, usuario):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(
+                detail='No tienes permisos para cambiar la contraseña de este usuario.'
+            )
+        
         serializer = CambiarPasswordSerializer(
             data=request.data,
             context={'request': request}
         )
         
         if serializer.is_valid():
-            # Cambiar la contraseña
+            # Cambiar la contraseña del usuario objetivo
             usuario.set_password(serializer.validated_data['password_nueva'])
             usuario.save()
             
@@ -171,10 +199,16 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             Response: Mensaje de éxito con estado HTTP 200
         """
         usuario = self.get_object()
+
+        # Verificar permiso explícito por rol de administrador (defensa en profundidad)
+        if not request.user.usuario_roles.filter(rol__nombre='administrador').exists():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(detail='No tienes permisos para activar usuarios.')
+
         usuario.estado = 'activo'
         usuario.is_active = True
         usuario.save()
-        
+
         return Response(
             {'detail': f'Usuario {usuario.username} activado correctamente.'},
             status=status.HTTP_200_OK
@@ -204,18 +238,23 @@ class UsuarioViewSet(viewsets.ModelViewSet):
                      auto-suspenderse
         """
         usuario = self.get_object()
-        
+
         # No permitir auto-suspensión
         if usuario.id == request.user.id:
             return Response(
                 {'detail': 'No puedes suspender tu propia cuenta.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+        # Verificar permiso explícito por rol de administrador (defensa en profundidad)
+        if not request.user.usuario_roles.filter(rol__nombre='administrador').exists():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(detail='No tienes permisos para suspender usuarios.')
+
         usuario.estado = 'suspendido'
         usuario.is_active = False
         usuario.save()
-        
+
         return Response(
             {'detail': f'Usuario {usuario.username} suspendido correctamente.'},
             status=status.HTTP_200_OK
