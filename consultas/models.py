@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from usuarios.models import Veterinario
 
+
 """
 Módulo de Gestión de Consultas y Historias Clínicas
 Sara Sanchez
@@ -13,6 +14,7 @@ Sara Sanchez
 """
 
 User = get_user_model()
+
 # HISTORIAL DE VACUNAS
 
 class HistorialVacuna(models.Model):
@@ -251,6 +253,24 @@ class Consulta(models.Model):
         verbose_name=_("Última actualización")
     )
 
+    consentimiento_token = models.CharField(
+        max_length=64,
+        editable=False,
+        null=True,
+        blank=True,
+        unique=True,
+        verbose_name=_("Token de Consentimiento")
+    )
+    consentimiento_otorgado = models.BooleanField(
+        default=False,
+        verbose_name=_("Consentimiento Otorgado")
+    )
+    consentimiento_fecha = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Fecha de Consentimiento")
+    )
+
     class Meta:
         verbose_name = _("Consulta")
         verbose_name_plural = _("Consultas")
@@ -278,6 +298,10 @@ class Consulta(models.Model):
             raise ValidationError({
                 'diagnostico': _("Debe ingresar un diagnóstico")
             })
+
+        if self.consentimiento_otorgado and not self.consentimiento_fecha:
+            self.consentimiento_fecha = timezone.now()
+
     def get_prescripciones_count(self):
         """Devuelve el número de prescripciones asociadas a esta consulta"""
         return self.prescripciones.count()

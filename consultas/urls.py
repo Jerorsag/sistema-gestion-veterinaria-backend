@@ -35,4 +35,5 @@ router.register(r'vacunas', HistorialVacunaViewSet, basename='vacuna')
 urlpatterns = [
     # Incluir todas las rutas generadas automáticamente por el router
     path('', include(router.urls)),
+    path('consultas/confirmar-consentimiento/',ConfirmarConsentimientoView.as_view(),name='confirmar-consentimiento'),
 ]

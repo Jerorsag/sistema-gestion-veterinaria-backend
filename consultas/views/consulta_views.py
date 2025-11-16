@@ -1,15 +1,16 @@
 """
 view y endpoinds para gestionar Consultas Veterinarias.
 """
-
+import secrets
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import ValidationError, PermissionDenied
-
+import secrets
 from consultas.models import Consulta
+from consultas.signals import consulta_consentimiento_signal
 from consultas.serializers.consulta_serializers import (
     ConsultaSerializer,
     ConsultaListSerializer,
@@ -18,6 +19,9 @@ from consultas.serializers.consulta_serializers import (
     ConsultaUpdateSerializer
 )
 
+def generar_token_consentimiento():
+    """Crea un token seguro de 32 bytes (aprox 43 caracteres)"""
+    return secrets.token_urlsafe(32)
 
 class ConsultaViewSet(viewsets.ModelViewSet):
     """
@@ -80,6 +84,33 @@ class ConsultaViewSet(viewsets.ModelViewSet):
             serializer.save(veterinario=user.perfil_veterinario)
         else:
             raise ValidationError({"detail": "El usuario autenticado no tiene un perfil de veterinario asociado."})
+
+    @action(detail=True, methods=['post'], url_path='enviar-consentimiento')
+    def enviar_consentimiento(self, request, pk=None):
+        """
+        Endpoint para que un veterinario envíe la solicitud de
+        consentimiento al propietario de la mascota.
+        """
+        try:
+            consulta = self.get_object()
+
+            # (Re)Generar el token de seguridad
+            consulta.consentimiento_token = generar_token_consentimiento()  # Usamos nuestra función
+            consulta.consentimiento_otorgado = False
+            consulta.save(update_fields=['consentimiento_token', 'consentimiento_otorgado'])
+
+            # ¡Disparar la bengala!
+            consulta_consentimiento_signal.send(sender=Consulta, consulta=consulta)
+
+            return Response(
+                {"detail": "Solicitud de consentimiento enviada correctamente."},
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Error al enviar consentimiento: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=False, methods=['get'], url_path='mascota/(?P<mascota_id>[^/.]+)')
     def por_mascota(self, request, mascota_id=None):

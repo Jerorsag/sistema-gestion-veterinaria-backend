@@ -68,3 +68,31 @@ def guardar_version_historia(sender, instance, **kwargs):
     Guarda una versión de la historia clínica usando el patrón Memento.
     """
     gestor_mementos.guardar(instance)
+
+# --- SEÑALES PERSONALIZADAS (BENGALAS) ---
+
+# Señal para cuando se finaliza la consulta (ej. para enviar resumen)
+consulta_finalizada_signal = django.dispatch.Signal()
+
+# Señal para cuando se envía la solicitud de consentimiento
+consulta_consentimiento_signal = django.dispatch.Signal()
+
+
+gestor_mementos = GestorMementos()
+
+@receiver(post_save, sender=Consulta)
+def crear_o_actualizar_historia(sender, instance, created, **kwargs):
+    """
+    Al crear una consulta, crea/actualiza la historia clínica
+    Y AHORA, notifica al cliente si es creada.
+    """
+    if created:
+        print(f"Nueva consulta creada: {instance.id}")
+        gestionar_historia_clinica(instance)
+
+        # Disparamos la señal de "consulta finalizada"
+        try:
+            consulta_finalizada_signal.send(sender=Consulta, consulta=instance)
+            print(f"Señal 'consulta_finalizada' enviada para consulta {instance.id}")
+        except Exception as e:
+            print(f"Error al enviar señal de consulta: {e}")
