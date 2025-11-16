@@ -1,7 +1,7 @@
 import pytest
 from django.urls import reverse
 from rest_framework import status
-from usuarios.modelos.reset_token import ResetPasswordToken
+from usuarios.models import ResetPasswordToken
 from django.utils import timezone
 from datetime import timedelta
 
