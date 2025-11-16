@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import Usuario, Rol, UsuarioRol, Cliente, Veterinario, Practicante
+from .modelos.reset_token import ResetPasswordToken
 
 @admin.register(Usuario)
 class UsuarioAdmin(BaseUserAdmin):
@@ -38,3 +39,10 @@ class VeterinarioAdmin(admin.ModelAdmin):
 @admin.register(Practicante)
 class PracticanteAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'tutor_veterinario', 'universidad', 'periodo_practica')
+
+
+@admin.register(ResetPasswordToken)
+class ResetPasswordTokenAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'token', 'usado', 'expires_at', 'created_at')
+    search_fields = ('usuario__username', 'usuario__email', 'token')
+    list_filter = ('usado',)
