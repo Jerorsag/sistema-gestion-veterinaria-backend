@@ -54,7 +54,7 @@ urlpatterns = [
     path('api/v1/', include('usuarios.urls')),
     path('api/v1/', include('mascotas.urls')),
     path('api/v1/', include('consultas.urls')),
-    path('api/v1/', include('inventario.urls')),
+    path('api/', include('inventario.urls')),
     path('api/v1/', include('citas.urls')),
 
     # OpenAPI schema + UIs

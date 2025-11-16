@@ -1,7 +1,7 @@
 from datetime import datetime, time, timedelta
 from django.utils import timezone
 from ..models import Cita
-from ..models.Choices import EstadoCita
+from .state import EstadoCita
 
 def obtener_horarios_disponibles(veterinario_id: str, fecha: datetime.date) -> list:
     """

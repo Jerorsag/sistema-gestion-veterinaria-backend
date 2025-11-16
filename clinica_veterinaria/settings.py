@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'consultas',
     'inventario',
     'citas',
+    'notificaciones',
 ]
 
 # Custom User Model
@@ -151,8 +152,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# EMAIL CONFIG
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# --- CONFIGURACIÓN DE ENVÍO DE CORREO (SMTP) ---
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
@@ -191,3 +192,19 @@ SPECTACULAR_SETTINGS = {
     'SCHEMA_PATH_PREFIX': '/api/v1',
     'TAGS_SORTER': 'alpha',
 }
+
+# --- CONFIGURACIÓN DE ENVÍO DE CORREO (SMTP) ---
+# La dirección del "buzón" de Gmail
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+# El puerto de comunicación (587 es el estándar para TLS)
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+# Le decimos que la conexión debe ser encriptada (Segura)
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True' # Convertimos string a Boolean
+
+
+# Leemos el usuario y la contraseña desde nuestro archivo .env
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+# El nombre que verá el cliente cuando reciba el correo
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+

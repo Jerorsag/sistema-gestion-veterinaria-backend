@@ -1,12 +1,13 @@
 from datetime import datetime
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, PermissionDenied
-from citas.services.disponibilidad import obtener_horarios_disponibles
-from citas.services.notificacion import notificar_observadores
+from citas.patterns.composite import obtener_horarios_disponibles
 from ..models import Cita, Servicio
-from ..models.Choices import EstadoCita
+from .state import EstadoCita
 from usuarios.models import Usuario
 from mascotas.models import Mascota
+from citas.signals import cita_agendada_signal,  cita_cancelada_signal, cita_reagendada_signal
+
 
 
 def agendar_nueva_cita(data: dict, usuario: Usuario) -> Cita:
@@ -73,10 +74,9 @@ def agendar_nueva_cita(data: dict, usuario: Usuario) -> Cita:
     )
 
     # --- Notificar ---
-    notificar_observadores(evento="CITA_CREADA", cita=cita)
+    cita_agendada_signal.send(sender=Cita, cita=cita)
 
     return cita
-
 
 def cancelar_cita(cita_id: str, usuario: Usuario) -> Cita:
     """
@@ -110,7 +110,7 @@ def cancelar_cita(cita_id: str, usuario: Usuario) -> Cita:
     cita.save()
 
     # Llamada al servicio de notificación
-    notificar_observadores(evento="CITA_CANCELADA", cita=cita)
+    cita_cancelada_signal.send(sender=Cita, cita=cita)
 
     return cita
 
@@ -151,6 +151,6 @@ def reagendar_cita(cita_id: str, nueva_fecha_hora_str: str, usuario: Usuario) ->
     cita.save()
 
     # 3. Notificar
-    notificar_observadores(evento="CITA_REAGENDADA", cita=cita)
+    cita_reagendada_signal.send(sender=Cita, cita=cita)
 
     return cita
