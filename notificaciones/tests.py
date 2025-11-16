@@ -13,7 +13,6 @@ from .handlers.handler_cita import handle_cita_agendada
 class NotificacionesHandlersTests(TestCase):
 
     def setUp(self):
-        # ... (El setUp es exactamente el mismo que te di antes)
         # 1. Crear Roles
         self.rol_cliente = Rol.objects.create(nombre='cliente')
         self.rol_vet = Rol.objects.create(nombre='veterinario')
@@ -61,9 +60,9 @@ class NotificacionesHandlersTests(TestCase):
     # --- NUEVA PRUEBA ---
     # Interceptamos el servicio que realmente envía el correo
     @patch('notificaciones.services.enviar_notificacion_generica')
-    def test_handler_llama_al_servicio_de_notificacion(self, mock_enviar_notificacion):
+    def t_handler_de_cita_agendada_llama_al_servicio(self, mock_enviar_notificacion):
         """
-        Prueba que el 'handler' (oyente) recibe la señal 
+        Prueba que 'handler_cita.py' recibe la señal 
         y llama al servicio de notificaciones.
         """
         
