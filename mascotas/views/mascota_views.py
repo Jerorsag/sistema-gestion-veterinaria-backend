@@ -1,9 +1,10 @@
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from mascotas.models import Mascota
 from mascotas.serializers.mascota_serializer import MascotaSerializer
+from mascotas.permissions import MascotaListPermission
 from rest_framework.exceptions import NotFound
+
 """
 Vistas (API) para el módulo de mascotas.
 
@@ -17,47 +18,80 @@ no pertenece al usuario autenticado.
 
 # Jeronimo Rodriguez - 11/03/2025
 
+def _obtener_rol_usuario(usuario):
+    """
+    Obtiene el primer rol asociado al usuario.
+    
+    Args:
+        usuario: Instancia de Usuario
+        
+    Returns:
+        str: nombre del rol (ej: 'administrador', 'veterinario', 'recepcionista', 'cliente')
+             o None si no tiene rol asignado
+    """
+    usuario_rol = usuario.usuario_roles.first()
+    if usuario_rol:
+        return usuario_rol.rol.nombre
+    return None
+
+
 class MascotaListCreateView(generics.ListCreateAPIView):
     """
-    Endpoint para listar y registrar mascotas del cliente autenticado.
-    - GET: Lista las mascotas del cliente.
+    Endpoint para listar y registrar mascotas según el rol del usuario.
+    
+    - GET: Lista las mascotas según el rol:
+        * ADMIN, VETERINARIO, RECEPCIONISTA: ven todas las mascotas.
+        * CLIENTE: solo ve sus propias mascotas.
     - POST: Crea una nueva mascota asociada al cliente autenticado.
     """
     serializer_class = MascotaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [MascotaListPermission]
 
     def get_queryset(self):
-        """Devuelve solo las mascotas del cliente autenticado."""
-        return Mascota.objects.filter(cliente__usuario=self.request.user)
+        """
+        Filtra las mascotas según el rol del usuario autenticado.
+        
+        Reglas:
+        - ADMIN, VETERINARIO, RECEPCIONISTA: retornan todas las mascotas.
+        - CLIENTE: retornan solo las mascotas donde mascota.cliente.usuario == request.user.
+        """
+        usuario = self.request.user
+        rol = _obtener_rol_usuario(usuario)
+        
+        # Roles que pueden ver todas las mascotas
+        roles_acceso_total = ['administrador', 'veterinario', 'recepcionista']
+        
+        if rol in roles_acceso_total:
+            # Acceso total a todas las mascotas
+            return Mascota.objects.all()
+        elif rol == 'cliente':
+            # Solo mascotas del cliente autenticado
+            return Mascota.objects.filter(cliente__usuario=usuario)
+        else:
+            # Si no tiene rol o rol desconocido, retorna vacío (seguridad por defecto)
+            return Mascota.objects.none()
 
     def perform_create(self, serializer):
         """Guarda la mascota asociada al cliente."""
         serializer.save()
 
     def list(self, request, *args, **kwargs):
-        """Retorna la lista de mascotas para el cliente autenticado.
+        """Retorna la lista de mascotas según el rol del usuario.
 
-        Si el cliente no tiene mascotas registradas devuelve un mensaje
-        claro en la respuesta para facilitar la interpretación desde clientes
-        como Postman o aplicaciones frontend.
-
-        Nota: si el proyecto tiene paginación activada, la estructura
-        de la respuesta puede incluir `results`; aquí devolvemos una
-        forma consistente con `results: []` cuando no hay datos.
+        Si no hay mascotas disponibles para el rol, devuelve un mensaje
+        claro para facilitar la interpretación desde clientes como Postman
+        o aplicaciones frontend.
         """
         conjunto_mascotas = self.get_queryset()
 
-        # Si no existen mascotas para el cliente autenticado, devolvemos
-        # una respuesta amigable en lugar de una lista vacía sin contexto.
         if not conjunto_mascotas.exists():
             return Response({
-                'message': 'No tienes mascotas registradas.',
+                'message': 'No hay mascotas disponibles para tu rol.',
                 'results': []
             }, status=status.HTTP_200_OK)
 
-        # Si hay mascotas, delegamos en la implementación por defecto de DRF
-        # para soportar paginación y serialización estándar.
         return super().list(request, *args, **kwargs)
+
 
 
 class MascotaRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
@@ -65,7 +99,7 @@ class MascotaRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     Permite consultar, actualizar o eliminar una mascota específica del cliente autenticado.
     """
     serializer_class = MascotaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [MascotaListPermission]
 
     def get_queryset(self):
         return Mascota.objects.filter(cliente__usuario=self.request.user)
@@ -98,6 +132,10 @@ class MascotaRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             # Mensaje claro para el cliente indicando que no se encontró la mascota
             # o que no pertenece al usuario autenticado.
             raise NotFound(detail='Mascota no encontrada o no pertenece al usuario autenticado.')
+
+        # Ejecutar los chequeos de permisos estándar (si se hubieran definido)
+        self.check_object_permissions(self.request, mascota)
+        return mascota
 
         # Ejecutar los chequeos de permisos estándar (si se hubieran definido)
         self.check_object_permissions(self.request, mascota)
