@@ -25,56 +25,55 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     
     def validate(self, attrs):
         """
-        Valida las credenciales del usuario y genera los tokens JWT.
-
-        Flujo del proceso:
-        1. Verifica si el usuario existe.
-        2. Comprueba si está bloqueado temporalmente.
-        3. Intenta autenticar; si falla, incrementa los intentos y genera un mensaje dinámico.
-        4. Si la autenticación es exitosa, reinicia el contador de intentos.
-        5. Retorna los tokens (access y refresh) y los datos del usuario autenticado.
-
-        Args:
-            attrs (dict): Diccionario con las credenciales del usuario (`username`, `password`).
-
-        Raises:
-            serializers.ValidationError: Si el usuario está bloqueado o las credenciales son incorrectas.
-
-        Returns:
-            dict: Par de tokens JWT (`access`, `refresh`) junto con la información del usuario.
+        Valida las credenciales del usuario y genera los tokens JWT usando Chain of Responsibility.
         """
-        
+        from usuarios.patterns.chain_of_responsibility import ValidadorCredenciales, ValidadorRol, ValidadorEstado
         username = attrs.get("username")
+        password = attrs.get("password")
 
         # Buscar usuario para controlar intentos fallidos
         try:
             user = Usuario.objects.get(username=username)
         except Usuario.DoesNotExist:
             raise serializers.ValidationError("Usuario o contraseña incorrectos.")
-        
+
         # Verificar si el usuario está temporalmente bloqueado
         if user.esta_bloqueado():
             minutos_restantes = int((user.bloqueado_hasta - timezone.now()).total_seconds() // 60)
             raise serializers.ValidationError(
                 f"Cuenta bloqueada temporalmente. Intente nuevamente en {minutos_restantes} minutos."
             )
-        
-        # Verificar estado del usuario ANTES de intentar autenticar
-        # Esto permite devolver mensajes de error apropiados
-        # Verificar primero el estado personalizado para mensajes más específicos
+
+        # Verificar estado del usuario ANTES de intentar la cadena de validadores
         if user.estado != 'activo':
             estado_display = user.get_estado_display() if hasattr(user, 'get_estado_display') else user.estado
             raise serializers.ValidationError(
                 f'Esta cuenta está en estado: {estado_display}.'
             )
-        
+
         # Verificar is_active después del estado personalizado
-        # (aunque normalmente si estado != 'activo', is_active también será False)
         if not user.is_active:
             raise serializers.ValidationError(
                 'Esta cuenta está inactiva. Contacte al administrador.'
             )
-        
+
+        # Construir la cadena de validadores
+        cadena = ValidadorCredenciales(
+            ValidadorRol(
+                ValidadorEstado()
+            )
+        )
+        request = {
+            'usuario': username,
+            'password': password,
+            'rol': user.usuario_roles.first().rol.nombre if user.usuario_roles.exists() else None,
+            'estado': user.estado
+        }
+        if not cadena.manejar(request):
+            # Registrar intento fallido si el usuario existe
+            mensaje = user.registrar_intento_fallido()
+            raise serializers.ValidationError(mensaje)
+
         # Intentar autenticación normal
         try:
             data = super().validate(attrs)
@@ -84,7 +83,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # Si la autenticación fue exitosa, reiniciar los intentos fallidos
         user.resetear_intentos()
-        
+
         # Agregar información adicional del usuario a la respuesta
         data['user'] = {
             'id': self.user.id,
@@ -93,7 +92,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'nombre_completo': self.user.get_full_name(),
             'roles': [ur.rol.nombre for ur in self.user.usuario_roles.select_related('rol')],
         }
-        
+
         return data
     
     @classmethod

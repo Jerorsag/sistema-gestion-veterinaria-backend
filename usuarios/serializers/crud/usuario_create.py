@@ -66,31 +66,37 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
         return attrs
     
     def create(self, validated_data):
-        """Crea el usuario y sus perfiles asociados."""
+        """
+        Crea el usuario usando el Factory Method según el rol principal.
+        """
+        from usuarios.patterns.factory_method import UsuarioFactory
+        roles = validated_data.pop('roles', [])
+        password = validated_data.pop('password')
+        validated_data.pop('password_confirm', None)
+
         # Extraer datos de perfiles
-        roles_data = validated_data.pop('roles')
         perfil_veterinario_data = validated_data.pop('perfil_veterinario', None)
         perfil_practicante_data = validated_data.pop('perfil_practicante', None)
         perfil_cliente_data = validated_data.pop('perfil_cliente', None)
-        validated_data.pop('password_confirm')
-        
-        # Crear usuario
-        password = validated_data.pop('password')
-        usuario = Usuario.objects.create_user(password=password, **validated_data)
-        
-        # Asignar roles
-        for rol_nombre in roles_data:
-            rol, _ = Rol.objects.get_or_create(nombre=rol_nombre)
-            UsuarioRol.objects.create(usuario=usuario, rol=rol)
-        
+
+        # Determinar el tipo de usuario principal
+        rol_principal = roles[0] if roles else 'cliente'
+        factory = UsuarioFactory()
+        usuario = factory.crear_usuario(rol_principal, validated_data)
+        usuario.set_password(password)
+        usuario.save()
+
+        # Asignar roles adicionales si existen
+        for rol_nombre in roles:
+            rol_obj, _ = Rol.objects.get_or_create(nombre=rol_nombre)
+            UsuarioRol.objects.create(usuario=usuario, rol=rol_obj)
+
         # Crear perfiles según el rol
         if perfil_veterinario_data:
             Veterinario.objects.create(usuario=usuario, **perfil_veterinario_data)
-        
         if perfil_practicante_data:
             Practicante.objects.create(usuario=usuario, **perfil_practicante_data)
-        
         if perfil_cliente_data:
             Cliente.objects.create(usuario=usuario, **perfil_cliente_data)
-        
+
         return usuario
