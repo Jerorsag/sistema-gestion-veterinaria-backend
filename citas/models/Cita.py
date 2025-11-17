@@ -3,7 +3,7 @@ from common.models import BaseModel
 from usuarios.models import Usuario 
 from mascotas.models import Mascota 
 from citas.models import Servicio 
-from citas.models.Choices import EstadoCita
+from citas.patterns.state import EstadoCita
 
 class Cita(BaseModel):
     """

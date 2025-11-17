@@ -4,9 +4,10 @@ Representa el formulario completo "Crear Historias Clínicas".
 """
 
 from rest_framework import serializers
-from consultas.models import Consulta, Prescripcion, Examen, HistorialVacuna
-from mascotas.models import Mascota
 from django.contrib.auth import get_user_model
+
+from consultas.models import Consulta
+from mascotas.models import Mascota
 
 from .prescripcion_serializers import (
     PrescripcionSerializer,
@@ -15,18 +16,15 @@ from .prescripcion_serializers import (
 from .examen_serializers import ExamenSerializer, ExamenCreateSerializer
 from .vacuna_serializers import HistorialVacunaSerializer, HistorialVacunaCreateSerializer
 
-User = get_user_model()
-VETERINARIO_GET = 'veterinario.usuario.get_full_name';
 
+User = get_user_model()
+VETERINARIO_GET = 'veterinario.get_full_name'
+
+
+# SERIALIZER - LISTADO
 class ConsultaListSerializer(serializers.ModelSerializer):
-    """
-    Serializer simplificado para listar consultas.
-    """
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
-    veterinario_nombre = serializers.CharField(
-        source='veterinario.usuario.get_full_name',
-        read_only=True
-    )
+    veterinario_nombre = serializers.CharField(source=VETERINARIO_GET, read_only=True)
     estado_vacunacion = serializers.SerializerMethodField()
     total_prescripciones = serializers.SerializerMethodField()
 
@@ -34,7 +32,6 @@ class ConsultaListSerializer(serializers.ModelSerializer):
         model = Consulta
         fields = [
             'id',
-            'mascota',
             'mascota_nombre',
             'veterinario_nombre',
             'fecha_consulta',
@@ -44,33 +41,19 @@ class ConsultaListSerializer(serializers.ModelSerializer):
         ]
 
     def get_estado_vacunacion(self, obj):
-        """Retorna el estado de vacunación registrado en esta consulta"""
         return obj.get_estado_vacunacion_consulta()
 
     def get_total_prescripciones(self, obj):
-        """Retorna la cantidad de medicamentos prescritos"""
         return obj.get_prescripciones_count()
 
-
+# SERIALIZER - DETALLE
 class ConsultaDetailSerializer(serializers.ModelSerializer):
-    """
-    Serializer detallado para ver una consulta específica como los datos la prescripcion y
-    todo lo que fue ordenado.
-    """
-    # Datos personales (auto-rellenados desde Mascota)
-    datos_personales = serializers.SerializerMethodField(
-        help_text="Datos de la mascota que se auto-rellenan en el formulario"
-    )
+    datos_personales = serializers.SerializerMethodField()
+    veterinario_nombre = serializers.CharField(source=VETERINARIO_GET, read_only=True)
 
-    # Veterinario que atendió
-    veterinario_nombre = serializers.CharField(
-        source=VETERINARIO_GET,
-        read_only=True
-    )
     prescripciones = PrescripcionSerializer(many=True, read_only=True)
     examenes = ExamenSerializer(many=True, read_only=True)
     vacunas = HistorialVacunaSerializer(many=True, read_only=True)
-
 
     class Meta:
         model = Consulta
@@ -93,20 +76,20 @@ class ConsultaDetailSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_datos_personales(self, obj):
-        cliente = obj.mascota.cliente if hasattr(obj, 'mascota') and obj.mascota else None
-        if cliente:
-            return {
-                "nombre": f"{cliente.usuario.nombre} {cliente.usuario.apellido}",
-                "telefono": getattr(cliente, "telefono", None),
-                "direccion": getattr(cliente, "direccion", None),
-            }
-        return None
+        mascota = obj.mascota
+        cliente = getattr(mascota, "cliente", None)
 
+        if not cliente:
+            return None
 
+        return {
+            "nombre": f"{cliente.usuario.nombre} {cliente.usuario.apellido}",
+            "telefono": getattr(cliente, "telefono", None),
+            "direccion": getattr(cliente, "direccion", None),
+        }
+
+# SERIALIZER - CREAR CONSULTA COMPLETA
 class ConsultaCreateSerializer(serializers.ModelSerializer):
-    """
-    Serializer para crear una consulta completa.
-    """
     prescripciones = PrescripcionCreateSerializer(many=True, required=False)
     examenes = ExamenCreateSerializer(many=True, required=False)
     vacunas = HistorialVacunaCreateSerializer(required=False)
@@ -125,160 +108,36 @@ class ConsultaCreateSerializer(serializers.ModelSerializer):
             'vacunas',
         ]
 
-    #Valida que la mascota este registrada en el sistema
+    # VALIDACIONES BÁSICAS
     def validate_mascota(self, value):
-        if not Mascota.objects.filter(pk=value.pk).exists():
+        if not Mascota.objects.filter(id=value.id).exists():
             raise serializers.ValidationError("La mascota seleccionada no existe")
         return value
 
-    #Valida que el campo descripcion no este vacio
     def validate_descripcion_consulta(self, value):
         if not value or value.strip() == '':
             raise serializers.ValidationError("La descripción de la consulta es obligatoria")
         return value
 
-    #Valida que el campo Diagnostico no este vacio
     def validate_diagnostico(self, value):
         if not value or value.strip() == '':
             raise serializers.ValidationError("Debe ingresar un diagnóstico")
         return value
 
+    # ---------------------
+    # CREACIÓN - DELEGADA A SERVICES
+    # ---------------------
     def create(self, validated_data):
-        """
-        Crea la consulta con todas sus relaciones anidadas.
-        """
-        prescripciones_data = validated_data.pop('prescripciones', [])
-        examenes_data = validated_data.pop('examenes', [])
-        vacunas_data = validated_data.pop('vacunas', None)
-
-        # Crear consulta principal
-        consulta = Consulta.objects.create(**validated_data)
-
-        # Crear prescripciones
-        for prescripcion_data in prescripciones_data:
-            Prescripcion.objects.create(
-                consulta=consulta,
-                **prescripcion_data
-            )
-
-        # Crear exámenes
-        for examen_data in examenes_data:
-            Examen.objects.create(
-                consulta=consulta,
-                **examen_data
-            )
-
-        # Crear registro de vacunas
-        if vacunas_data:
-            HistorialVacuna.objects.create(
-                consulta=consulta,
-                **vacunas_data
-            )
-
-        return consulta
+        from consultas.services.consulta_service import crear_consulta_completa
+        return crear_consulta_completa(validated_data)
 
     def to_representation(self, instance):
-        """Retorna la representación completa después de crear"""
         return ConsultaDetailSerializer(instance, context=self.context).data
 
-class ConsultaUpdateSerializer(serializers.ModelSerializer):
-    """
-       Serializer para actualizar una consulta completa con sus relaciones anidadas.
-    """
-    prescripciones = PrescripcionCreateSerializer(many=True, required=False)
-    examenes = ExamenCreateSerializer(many=True, required=False)
-    vacunas = HistorialVacunaCreateSerializer(required=False)
-
-    class Meta:
-        model = Consulta
-        fields = [
-            'mascota',
-            'veterinario',
-            'fecha_consulta',
-            'descripcion_consulta',
-            'diagnostico',
-            'notas_adicionales',
-            'prescripciones',
-            'examenes',
-            'vacunas',
-        ]
-        read_only_fields = ['mascota']
-
-    #Valida que la consulta no este vacia
-    def validate_descripcion_consulta(self, value):
-        if not value or value.strip() == '':
-            raise serializers.ValidationError("La descripción de la consulta es obligatoria")
-        return value
-
-    #Valida que el diagnostico no este vacio cuando se quiera actualizar
-    def validate_diagnostico(self, value):
-        if not value or value.strip() == '':
-            raise serializers.ValidationError("Debe ingresar un diagnóstico")
-        return value
-
-    def update(self, instance, validated_data):
-        """
-        Actualiza la consulta y sus relaciones anidadas.
-        """
-        prescripciones_data = validated_data.pop('prescripciones', None)
-        examenes_data = validated_data.pop('examenes', None)
-        vacunas_data = validated_data.pop('vacunas', None)
-
-        # Actualizar campos básicos de la consulta
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-
-        # Actualizar prescripciones si se agregan otro medicamento
-        if prescripciones_data is not None:
-            # Eliminar prescripciones realizadas antes de hacer la actualizacion
-            instance.prescripciones.all().delete()
-
-            # Crear nuevas prescripciones con la actualizacion realiazada
-            for prescripcion_data in prescripciones_data:
-                Prescripcion.objects.create(
-                    consulta=instance,
-                    **prescripcion_data
-                )
-
-        # Actualizar exámenes si se agrego un examen
-        if examenes_data is not None:
-            # Eliminar exámenes que estaban antes de realizar la actualizacion
-            instance.examenes.all().delete()
-
-            # Crear nuevos exámenes con los datos actualizados
-            for examen_data in examenes_data:
-                Examen.objects.create(
-                    consulta=instance,
-                    **examen_data
-                )
-
-        # Actualizar vacunas si se actualiza el estado o el campo de descripcion de vacunas
-        if vacunas_data is not None:
-            # Eliminar registro de vacunas que estaban antes de realizar la actualizacion
-            instance.vacunas.all().delete()
-
-            # Crear nuevo registro de vacunas con los campos actualizados
-            HistorialVacuna.objects.create(
-                consulta=instance,
-                **vacunas_data
-            )
-
-        return instance
-
-    def to_representation(self, instance):
-        """Retorna la representación completa después de actualizar"""
-        return ConsultaDetailSerializer(instance, context=self.context).data
-
+# SERIALIZER GENERAL
 class ConsultaSerializer(serializers.ModelSerializer):
-    """
-    Serializer general para Consulta.
-    """
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
-    veterinario_nombre = serializers.CharField(
-        source=VETERINARIO_GET,
-        read_only=True
-    )
+    veterinario_nombre = serializers.CharField(source=VETERINARIO_GET, read_only=True)
 
     class Meta:
         model = Consulta

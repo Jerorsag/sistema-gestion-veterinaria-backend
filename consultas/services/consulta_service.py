@@ -4,23 +4,72 @@ Sara Sanchez
 03 Noviembre 2025
 """
 
-def get_datos_personales(consulta):
-    """
-    Retorna los datos personales de la mascota para auto-rellenar el formulario.
-    """
-    mascota = consulta.mascota
-    return {
-        'nombre_mascota': mascota.nombre,
-        'nombre_propietario': mascota.propietario.get_full_name(),
-        'edad': mascota.calcular_edad(),
-        'tipo_especie': mascota.especie,
-        'raza': mascota.raza.nombre if mascota.raza else "No especificada",
-        'estado_vacunacion': mascota.estado_vacunacion,
-    }
+from django.db import transaction
 
-def get_estado_vacunacion_consulta(consulta):
+from consultas.models import (
+    Consulta,
+    Prescripcion,
+    Examen,
+    HistorialVacuna
+)
+
+
+@transaction.atomic
+def crear_consulta_completa(validated_data):
     """
-    Retorna el estado de vacunación registrado en esta consulta.
+    Crea una Consulta completa con prescripciones, exámenes y vacunas,
+    garantizando integridad con transacciones.
     """
-    vacuna = consulta.vacunas.first()
-    return vacuna.get_estado_display() if vacuna else "No registrado"
+
+    # Extraer datos anidados
+    prescripciones_data = validated_data.pop('prescripciones', [])
+    examenes_data = validated_data.pop('examenes', [])
+    vacunas_data = validated_data.pop('vacunas', None)
+
+    # Crear consulta principal
+    consulta = Consulta.objects.create(**validated_data)
+
+    # Crear prescripciones
+    for p_data in prescripciones_data:
+        Prescripcion.objects.create(
+            consulta=consulta,
+            **p_data
+        )
+
+    # Crear exámenes
+    for e_data in examenes_data:
+        Examen.objects.create(
+            consulta=consulta,
+            **e_data
+        )
+
+    # Crear registro de vacunas
+    if vacunas_data:
+        HistorialVacuna.objects.create(
+            consulta=consulta,
+            **vacunas_data
+        )
+
+    return consulta
+
+def crear_consulta(data, veterinario):
+    """
+    Crea una consulta y procesa su historia clínica, vacunas, etc.
+    """
+    consulta = Consulta.objects.create(
+        veterinario=veterinario,
+        **data
+    )
+
+    # ▶ Aquí llamas a servicios externos:
+    from consultas.services.historia_clinica_services import gestionar_historia_clinica
+    gestionar_historia_clinica(consulta)
+
+    return consulta
+
+
+def obtener_datos_personales(consulta):
+    """
+    Delegación para datos personales.
+    """
+    return consulta.get_datos_personales()

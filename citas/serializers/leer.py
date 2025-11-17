@@ -12,7 +12,7 @@ class ServicioSerializer(serializers.ModelSerializer):
 class CitaSerializer(serializers.ModelSerializer):
     """
     Serializer para LEER (GET) una Cita.
-    Muestra nombres (ej. "Max") en lugar de solo IDs (UUIDs).
+    Muestra nombres (ej. "Max") en lugar de solo IDs .
     """
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
     veterinario_nombre = serializers.CharField(source='veterinario.get_full_name', read_only=True)

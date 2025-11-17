@@ -7,7 +7,7 @@ from ..services import (
     reagendar_cita
 )
 
-from citas.models.Choices import EstadoCita
+from citas.patterns.state import EstadoCita
 
 
 class CrearCitaSerializer(serializers.Serializer):
@@ -56,7 +56,7 @@ class ReagendarCitaSerializer(serializers.Serializer):
         
         nueva_fecha_dt = validated_data['fecha_hora']
         nueva_fecha_str = nueva_fecha_dt.isoformat()
-
+        
         if nueva_fecha_dt.tzinfo == timezone.utc:
              nueva_fecha_str = nueva_fecha_str.replace('+00:00', 'Z')
 
@@ -64,7 +64,7 @@ class ReagendarCitaSerializer(serializers.Serializer):
             # 'instance' es la cita que se está actualizando
             return reagendar_cita(
                 cita_id=instance.id, 
-                nueva_fecha_hora_str=nueva_fecha_str,
+                nueva_fecha_hora_str=nueva_fecha_str, 
                 usuario=usuario
             )
         except (ValidationError, PermissionDenied) as e:

@@ -1,3 +1,5 @@
+# apps/consultas/serializers/historia_clinica_serializers.py
+
 """
 Serializers para el modelo HistoriaClinica.
 Implementa el COMPOSITE PATTERN.
@@ -9,6 +11,11 @@ from django.db.models import Count
 from consultas.models import HistoriaClinica
 from mascotas.models import Mascota
 from .consulta_serializers import ConsultaDetailSerializer
+from consultas.services.historia_service import (
+    obtener_estadisticas_historia,
+    obtener_medicamentos_frecuentes,
+    obtener_ultima_consulta,
+)
 
 
 class HistoriaClinicaSerializer(serializers.ModelSerializer):
@@ -66,23 +73,16 @@ class HistoriaClinicaDetalleSerializer(serializers.ModelSerializer):
     """
     Serializer detallado para Historia Clínica consolidada.
     """
-    # Datos de la mascota y paciente (Composite root)
-    mascota_datos = serializers.SerializerMethodField(
-        help_text="Datos completos de la mascota"
-    )
-    propietario = serializers.SerializerMethodField(
-        help_text="Datos del propietario de la mascota"
-    )
-
+    # Datos de la mascota (Composite root)
+    mascota_datos = serializers.SerializerMethodField(help_text="Datos completos de la mascota")
+    # Propietario
+    propietario = serializers.SerializerMethodField(help_text="Datos del propietario de la mascota")
     # Lista de consultas (Components)
-    consultas = serializers.SerializerMethodField(
-        help_text="Todas las consultas ordenadas cronológicamente (más recientes primero)"
-    )
-
+    consultas = serializers.SerializerMethodField(help_text="Todas las consultas ordenadas cronológicamente (más recientes primero)")
     # Estadísticas generales
-    estadisticas = serializers.SerializerMethodField(
-        help_text="Estadísticas generales de la historia clínica"
-    )
+    estadisticas = serializers.SerializerMethodField(help_text="Estadísticas generales de la historia clínica")
+    # Medicamentos más frecuentes
+    medicamentos_frecuentes = serializers.SerializerMethodField(help_text="Top 5 medicamentos más prescritos")
 
     class Meta:
         model = HistoriaClinica
@@ -96,6 +96,7 @@ class HistoriaClinicaDetalleSerializer(serializers.ModelSerializer):
             'estado_vacunacion_actual',
             'consultas',
             'estadisticas',
+            'medicamentos_frecuentes',
         ]
         read_only_fields = ['id', 'fecha_creacion', 'fecha_actualizacion']
 
@@ -141,39 +142,23 @@ class HistoriaClinicaDetalleSerializer(serializers.ModelSerializer):
         }
 
     def get_consultas(self, obj):
-        """
-        Retorna todas las consultas con sus relaciones.
-        """
-        # Ordenar por fecha descendente (más recientes primero)
-        consultas = obj.mascota.consultas.all().order_by('-fecha_consulta')
-        return ConsultaDetailSerializer(consultas, many=True, context=self.context).data
+        consultas = obj.mascota.consultas.order_by('-fecha_consulta')
+        return ConsultaDetailSerializer(
+            consultas, many=True, context=self.context
+        ).data
 
     def get_estadisticas(self, obj):
-        """
-        Retorna estadísticas generales de la historia clínica.
-        """
-        consultas = obj.mascota.consultas.all()
-        primera_consulta = consultas.order_by('fecha_consulta').first()
-        ultima_consulta = consultas.order_by('-fecha_consulta').first()
+        return obtener_estadisticas_historia(obj)
 
-        # Contar prescripciones totales
-        total_prescripciones = 0
-        for consulta in consultas:
-            if hasattr(consulta, 'prescripciones'):
-                total_prescripciones += consulta.prescripciones.count()
-
-        return {
-            'total_consultas': obj.get_total_consultas(),
-            'total_prescripciones': total_prescripciones,
-            'primera_consulta': primera_consulta.fecha_consulta if primera_consulta else None,
-            'ultima_consulta': ultima_consulta.fecha_consulta if ultima_consulta else None,
-        }
+    def get_medicamentos_frecuentes(self, obj):
+        return obtener_medicamentos_frecuentes(obj)
 
 
 class UltimaConsultaSerializer(serializers.Serializer):
     """
     Serializer para la vista "Ver Ultima Historia Clinica".
     """
+
     mascota_nombre = serializers.CharField()
     propietario_nombre = serializers.CharField()
     ultima_consulta = ConsultaDetailSerializer()

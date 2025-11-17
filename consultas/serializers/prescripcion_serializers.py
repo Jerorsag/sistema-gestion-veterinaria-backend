@@ -5,7 +5,7 @@ Serializers para el modelo Prescripcion.
 from rest_framework import serializers
 from consultas.models import Prescripcion
 
-MEDICAMENTO_nombre = 'medicamento.descripcion'
+MEDICAMENTO_nombre = 'medicamento.nombre'
 MEDICAMENTO_descripcion = 'medicamento.descripcion'
 MEDICAMENTO_stock = 'medicamento.stock'
 
@@ -14,10 +14,10 @@ class PrescripcionListSerializer(serializers.ModelSerializer):
     """
     Serializer simplificado para listar prescripciones.
     """
-    producto_nombre = serializers.CharField(
-        source='medicamento.descripcion',
+    producto_nombre = serializers.CharField(source='medicamento.nombre',
         read_only=True
     )
+
     class Meta:
         model = Prescripcion
         fields = [
@@ -30,7 +30,7 @@ class PrescripcionListSerializer(serializers.ModelSerializer):
 
 class PrescripcionSerializer(serializers.ModelSerializer):
     """
-    Incluye información detallada del producto completo para lectura de prescripciones.
+    Incluye información detallada del producto (medicamento) completo para lectura de prescripciones.
     """
     producto_nombre = serializers.CharField(
         source=MEDICAMENTO_descripcion,
@@ -38,12 +38,12 @@ class PrescripcionSerializer(serializers.ModelSerializer):
     )
 
     producto_descripcion = serializers.CharField(
-        source='medicamento.descripcion',
+        source=MEDICAMENTO_descripcion,
         read_only=True
     )
 
     stock_disponible = serializers.IntegerField(
-        source='medicamento.stock',
+        source=MEDICAMENTO_stock,
         read_only=True
     )
 
@@ -52,7 +52,7 @@ class PrescripcionSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'consulta',
-            'medicamento',
+            'medicamento',  # FK → Producto
             'producto_nombre',
             'producto_descripcion',
             'cantidad',
@@ -67,6 +67,7 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
     """
     Serializer para crear prescripciones.
     """
+
     producto_nombre = serializers.CharField(
         source=MEDICAMENTO_descripcion,
         read_only=True
@@ -97,32 +98,32 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
         # Validar que no esté vencido
         if hasattr(value, "esta_vencido") and value.esta_vencido():
             raise serializers.ValidationError(
-                f"El producto '{value.descripcion}' está vencido. "
+                f"El producto '{value.nombre}' está vencido. "
                 f"Fecha de vencimiento: {value.fecha_vencimiento.strftime('%d/%m/%Y')}"
             )
 
         return value
 
-    #Valida que la cantidad sea al menos 1
     def validate_cantidad(self, value):
+        """Valida que la cantidad sea al menos 1"""
         if value < 1:
             raise serializers.ValidationError("La cantidad debe ser al menos 1")
         return value
 
-    #Valida que el inventario contenga suficiente stock del mediccamento prescripto.
     def validate(self, data):
-
+        """
+        Validación cruzada: producto vs cantidad.
+        """
         producto = data.get('medicamento')
         cantidad = data.get('cantidad')
 
-        if producto and cantidad:
-            if producto.stock < cantidad:
-                raise serializers.ValidationError({
-                    'cantidad': (
-                        f'Stock insuficiente. Solo hay {producto.stock} '
-                        f'unidades disponibles de {producto.descripcion}'
-                    )
-                })
+        if producto and cantidad and producto.stock < cantidad:
+            raise serializers.ValidationError({
+                'cantidad': (
+                    f'Stock insuficiente. Solo hay {producto.cantidad_disponible} '
+                    f'unidades disponibles de {producto.nombre}'
+                )
+            })
 
         return data
 

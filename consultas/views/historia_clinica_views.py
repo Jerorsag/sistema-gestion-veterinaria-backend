@@ -10,6 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.db.models import Count
 
+# IMPORTANTE: Usar el modelo de consultas, NO de mascotas
 from consultas.models import HistoriaClinica
 from consultas.serializers.historia_clinica_serializers import (
     HistoriaClinicaSerializer,
@@ -22,6 +23,7 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet para visualizar historias clínicas consolidadas.
     """
+
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['mascota']
@@ -32,7 +34,9 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
     ]
 
     def get_queryset(self):
-        """ Filtra historias según el rol del usuario."""
+        """
+        Filtra historias según el rol del usuario.
+        """
         user = self.request.user
 
         queryset = HistoriaClinica.objects.select_related(
@@ -45,24 +49,18 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
             'mascota__consultas'
         )
 
-        #Admins ven todo
-        if user.is_staff:
-            return queryset
-
-        #Veterinarios y practicantes ven todo
-        if hasattr(user, 'perfil_veterinario') or hasattr(user, 'perfil_practicante'):
-            return queryset
-
-        #Clientes solo ven sus mascotas
-        if hasattr(user, 'perfil_cliente'):
-            cliente = user.perfil_cliente
+        # FILTRADO POR ROL
+        if hasattr(user, 'cliente'):
+            cliente = user.cliente
             return queryset.filter(mascota__cliente=cliente)
 
-        # Sin rol: sin acceso
-        return queryset.none()
+        # Si no tiene perfil_cliente, es VETERINARIO, PRACTICANTE, RECEPCIONISTA o ADMIN
+        return queryset
 
     def get_serializer_class(self):
-        """ Retorna el serializer apropiado según la acción."""
+        """
+        Retorna el serializer apropiado según la acción.
+        """
         if self.action == 'retrieve' or self.action == 'por_mascota':
             return HistoriaClinicaDetalleSerializer
         elif self.action == 'ultima_consulta':
@@ -71,7 +69,9 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='mascota/(?P<mascota_id>[^/.]+)')
     def por_mascota(self, request, mascota_id=None):
-        """ Retorna la historia clínica de una mascota por su ID. """
+        """
+        Retorna la historia clínica de una mascota por su ID.
+        """
         try:
             historia = self.get_queryset().get(mascota_id=mascota_id)
         except HistoriaClinica.DoesNotExist:
@@ -85,14 +85,18 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='ultima-consulta')
     def ultima_consulta(self, request, pk=None):
-        """ Retorna solo la última consulta de la historia clínica. """
+        """
+        Retorna solo la última consulta de la historia clínica.
+        """
         historia = self.get_object()
         serializer = UltimaConsultaSerializer(historia, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def buscar(self, request):
-        """ Búsqueda avanzada de historias clínicas."""
+        """
+        Búsqueda avanzada de historias clínicas.
+        """
         query = request.query_params.get('q', '')
 
         if not query:
