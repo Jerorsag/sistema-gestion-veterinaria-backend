@@ -5,8 +5,11 @@ from usuarios.views.auth_views import (
     CustomTokenObtainPairView, 
     RegistroView, 
     logout_view,
+    cambiar_password_view,
     verificar_token_view,
-    PerfilView
+    PerfilView,
+    ResetPasswordRequestView,
+    ResetPasswordConfirmView,
 )
 from usuarios.views.user_views import UsuarioViewSet, RolViewSet
 
@@ -27,6 +30,9 @@ urlpatterns = [
 
      # Perfil del usuario autenticado
     path('perfil/', PerfilView.as_view(), name='perfil'),
+    path('perfil/cambiar-password/', cambiar_password_view, name='cambiar_password'),
+    path('auth/reset-password/request/', ResetPasswordRequestView.as_view(), name='reset_password_request'),
+    path('auth/reset-password/confirm/', ResetPasswordConfirmView.as_view(), name='reset_password_confirm'),
 
     # Rutas del router (CRUD de usuarios y roles)
     path('', include(router.urls))

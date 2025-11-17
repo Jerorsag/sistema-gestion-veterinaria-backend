@@ -1,6 +1,8 @@
 from .template_method import BaseNotification
 # Importamos desde nuestra subcarpeta de estrategias
+# Import strategies
 from .strategies.strategy_cita import (CitaAgendadaEmail,CitaCanceladaEmail,CitaReagendadaEmail)
+from .strategies.strategy_reset import ResetPasswordEmail
 # Futuro: 
 # from .strategies.strategy_consulta import ConsultaFinalizadaEmail
 
@@ -30,6 +32,8 @@ class NotificationFactory:
             
             # --- Eventos de Consultas (Futuro) ---
             # "CONSULTA_FINALIZADA": ConsultaFinalizadaEmail, 
+            # --- Eventos de Reset Password ---
+            "RESET_PASSWORD": ResetPasswordEmail,
         }
 
         ConstructorDeNotificacion = estrategias.get(evento)
