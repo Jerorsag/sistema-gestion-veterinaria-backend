@@ -9,6 +9,7 @@ from .models import Cita, Servicio
 from . import serializers
 from . import services
 
+print("--- CARGANDO CITAS/VIEWS.PY (NUEVA VERSIÓN) ---")
 
 class CitaViewSet(viewsets.ModelViewSet):
     """
@@ -153,11 +154,13 @@ class CitaViewSet(viewsets.ModelViewSet):
 
 
 class ServicioViewSet(viewsets.ModelViewSet):
+
     """ Endpoint"""
     queryset = Servicio.objects.all()
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
+
         """
         Define qué serializer usar según la acción (POST, GET, etc).
         """
