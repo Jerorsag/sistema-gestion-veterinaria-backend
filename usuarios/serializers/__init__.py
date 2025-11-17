@@ -11,6 +11,8 @@ from .auth import (
     ResetPasswordRequestSerializer,
     ResetPasswordConfirmSerializer,
     RegistroPendienteSerializer,
+    CodigoVerificacionSerializer,
+    ReenviarCodigoSerializer
 )
 
 # CRUD serializers
@@ -49,4 +51,6 @@ __all__ = [
     'VeterinarioSerializer',
     'PracticanteSerializer',
     'ClienteSerializer',
+    'CodigoVerificacionSerializer',
+    'ReenviarCodigoSerializer'
 ]

@@ -12,6 +12,9 @@ from usuarios.views import (
     ResetPasswordConfirmView,
     UsuarioViewSet,
     RolViewSet,
+    RegistroUsuarioAPIView,
+    VerificarCodigoAPIView,
+    ReenviarCodigoAPIView
 )
 
 # Configurar el router para los ViewSets
@@ -27,7 +30,12 @@ urlpatterns = [
     path('auth/verify/', verificar_token_view, name='verify_token'),
 
     # Registro público
-     path('auth/register/', RegistroView.as_view(), name='registro'),
+    path('auth/register/', RegistroView.as_view(), name='registro'),
+
+     # Flujo de registro con verificación en 2 pasos
+    path('auth/registro/', RegistroUsuarioAPIView.as_view(), name='registro'),
+    path('auth/verificar/', VerificarCodigoAPIView.as_view(), name='verificar_codigo'),
+    path('auth/reenviar-codigo/', ReenviarCodigoAPIView.as_view(), name='reenviar_codigo'),
 
      # Perfil del usuario autenticado
     path('perfil/', PerfilView.as_view(), name='perfil'),
