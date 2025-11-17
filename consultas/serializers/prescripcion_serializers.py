@@ -120,8 +120,8 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
         if producto and cantidad and producto.stock < cantidad:
             raise serializers.ValidationError({
                 'cantidad': (
-                    f'Stock insuficiente. Solo hay {producto.cantidad_disponible} '
-                    f'unidades disponibles de {producto.nombre}'
+                    f'Stock insuficiente. Solo hay {producto.stock} '
+                    f'unidades disponibles de {producto.descripcion}'
                 )
             })
 
