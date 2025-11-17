@@ -60,7 +60,7 @@ class DetalleFactura(models.Model):
 
             if self.servicio:
                 # Ajusta si tu servicio usa otro campo
-                precio_servicio = getattr(self.servicio, "precio", None)
+                precio_servicio = getattr(self.servicio, "costo", None)
                 if precio_servicio:
                     self.precio_unitario = precio_servicio
 
