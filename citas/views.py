@@ -9,8 +9,6 @@ from .models import Cita, Servicio
 from . import serializers
 from . import services
 
-print("--- CARGANDO CITAS/VIEWS.PY (NUEVA VERSIÓN) ---")
-
 class CitaViewSet(viewsets.ModelViewSet):
     """
     API Endpoint para la gestión de Citas (CRUD y acciones).

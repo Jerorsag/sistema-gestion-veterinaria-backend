@@ -1,6 +1,7 @@
 # Estos serializers se usan para recibir datos (POST/PUT/PATCH). Validan y llaman a la capa de servicios.
 from rest_framework import serializers
 from django.utils import timezone
+import datetime
 from rest_framework.exceptions import ValidationError, PermissionDenied 
 from citas.models import Cita,Servicio
 from ..services import agendar_nueva_cita, reagendar_cita
@@ -54,7 +55,7 @@ class ReagendarCitaSerializer(serializers.Serializer):
         nueva_fecha_dt = validated_data['fecha_hora']
         nueva_fecha_str = nueva_fecha_dt.isoformat()
         
-        if nueva_fecha_dt.tzinfo == timezone.utc:
+        if nueva_fecha_dt.tzinfo == datetime.timezone.utc:
              nueva_fecha_str = nueva_fecha_str.replace('+00:00', 'Z')
 
         try:
