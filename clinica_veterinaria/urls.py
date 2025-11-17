@@ -56,6 +56,7 @@ urlpatterns = [
     path('api/v1/', include('consultas.urls')),
     path('api/', include('inventario.urls')),
     path('api/v1/', include('citas.urls')),
+    path('api/v1/', include('transacciones.urls')),
 
     # OpenAPI schema + UIs
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
