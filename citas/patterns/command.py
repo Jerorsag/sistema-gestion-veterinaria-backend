@@ -6,7 +6,7 @@ from ..models import Cita, Servicio
 from .state import EstadoCita
 from usuarios.models import Usuario
 from mascotas.models import Mascota
-from citas.signals import cita_agendada_signal,  cita_cancelada_signal, cita_reagendada_signal
+from citas.signals import cita_agendada_signal, cita_cancelada_signal, cita_reagendada_signal
 
 
 
