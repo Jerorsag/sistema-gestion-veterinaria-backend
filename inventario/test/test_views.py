@@ -1,7 +1,6 @@
 from rest_framework import status
 from rest_framework.test import APITestCase
 from inventario.models import Marca, Categoria, Producto, Kardex
-from decimal import Decimal
 
 
 class MarcaViewSetTest(APITestCase):
