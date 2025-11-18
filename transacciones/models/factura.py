@@ -4,11 +4,16 @@ from django.conf import settings
 from decimal import Decimal
 
 class Factura(models.Model):
-    ESTADOS = (
+    ESTADO_CHOICES = [
         ('PENDIENTE', 'Pendiente'),
         ('PAGADA', 'Pagada'),
         ('ANULADA', 'Anulada'),
-        ('PARCIAL', 'Pago parcial'),
+    ]
+
+    estado = models.CharField(
+        max_length=20,
+        choices=ESTADO_CHOICES,
+        default='PENDIENTE'
     )
 
     cliente = models.ForeignKey(

@@ -1,9 +1,11 @@
 from transacciones.models.factura import Factura
+from transacciones.models.pago import Pago
 from transacciones.models.detalle_factura import DetalleFactura
 from citas.models import Cita
 from consultas.models import Consulta
 from inventario.models import Producto
 from django.core.exceptions import ValidationError
+from transacciones.patterns.state_factory import EstadoFacturaFactory
 
 
 class FacturaService:
@@ -62,4 +64,29 @@ class FacturaService:
             )
 
         factura.recalcular_totales()
+        return factura
+    
+    
+    @staticmethod
+    def pagar_factura(factura_id, metodo_pago, monto, referencia=""):
+        factura = Factura.objects.get(id=factura_id)
+
+        Pago.objects.create(
+            factura=factura,
+            metodo=metodo_pago,
+            monto=monto,
+            referencia=referencia
+        )
+
+        return factura
+    
+
+    @staticmethod
+    def anular_factura(factura_id):
+        factura = Factura.objects.get(id=factura_id)
+        estado = EstadoFacturaFactory.obtener_estado(factura.estado)
+
+        # Aplicar lógica de cambio de estado
+        estado.anular(factura)
+
         return factura

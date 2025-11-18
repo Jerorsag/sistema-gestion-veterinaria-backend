@@ -13,7 +13,7 @@ class DetalleInline(admin.TabularInline):
 
 @admin.register(Factura)
 class FacturaAdmin(admin.ModelAdmin):
-    list_display = ('id', 'cliente', 'fecha', 'total', 'pagada')
+    list_display = ('id', 'cliente', 'fecha', 'total', 'pagada', 'estado', 'cita', 'consulta')
     inlines = [DetalleInline]
 
 admin.site.register(Pago)

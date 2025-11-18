@@ -5,11 +5,14 @@ from transacciones.views.factura_view import (
 )
 from transacciones.views.pago_view import PagoListCreateView
 from transacciones.views.metodo_pago_view import MetodoPagoListView
-from transacciones.views.factura_actions_view import (
+from transacciones.views.crear_factura_actions import (
     CrearFacturaDesdeCita,
     CrearFacturaDesdeConsulta
 )
-
+from transacciones.views.factura_actions import (
+    PagarFacturaView,
+    AnularFacturaView
+)
 
 urlpatterns = [
 
@@ -20,6 +23,10 @@ urlpatterns = [
     # Acciones especiales
     path("facturas/crear-desde-cita/<int:cita_id>/", CrearFacturaDesdeCita.as_view()),
     path("facturas/crear-desde-consulta/<int:consulta_id>/", CrearFacturaDesdeConsulta.as_view()),
+
+    # Acciones de pagos
+    path('facturas/<int:factura_id>/pagar/', PagarFacturaView.as_view()),
+    path('facturas/<int:factura_id>/anular/', AnularFacturaView.as_view()),
 
     # Pagos
     path('pagos/', PagoListCreateView.as_view(), name='pago-list-create'),

@@ -10,6 +10,7 @@ class FacturaSerializer(serializers.ModelSerializer):
         model = Factura
         fields = [
             'id',
+            'estado',
             'cliente',
             'cita',
             'consulta',
