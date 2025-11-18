@@ -1,11 +1,12 @@
+from datetime import datetime
 from transacciones.models.factura import Factura
 from transacciones.models.pago import Pago
 from transacciones.models.detalle_factura import DetalleFactura
 from citas.models import Cita
 from consultas.models import Consulta
-from inventario.models import Producto
 from django.core.exceptions import ValidationError
 from transacciones.patterns.state_factory import EstadoFacturaFactory
+from notificaciones.patterns.strategies.factura_email import FacturaGeneradaEmail, FacturaPagadaEmail
 
 
 class FacturaService:
@@ -36,6 +37,20 @@ class FacturaService:
         )
 
         factura.recalcular_totales()
+
+        context = {
+            "cliente_nombre": factura.cliente.get_full_name(),
+            "factura_id": factura.id,
+            "fecha_emision": factura.fecha.strftime("%d/%m/%Y %H:%M"),
+            "estado": factura.estado,
+            "total": factura.total,
+            "detalles": factura.detalles.all(),
+            "url_historial": "https://frontend/usuario/facturas",
+            "anio_actual": datetime.now().year,
+        }
+
+        FacturaGeneradaEmail(context, factura.cliente.email).send()
+
         return factura
 
     @staticmethod
@@ -64,6 +79,20 @@ class FacturaService:
             )
 
         factura.recalcular_totales()
+
+        context = {
+            "cliente_nombre": factura.cliente.get_full_name(),
+            "factura_id": factura.id,
+            "fecha_emision": factura.fecha.strftime("%d/%m/%Y %H:%M"),
+            "estado": factura.estado,
+            "total": factura.total,
+            "detalles": factura.detalles.all(),
+            "url_historial": "https://frontend/usuario/facturas",
+            "anio_actual": datetime.now().year,
+        }
+
+        FacturaGeneradaEmail(context, factura.cliente.email).send()
+        
         return factura
     
     
@@ -71,12 +100,24 @@ class FacturaService:
     def pagar_factura(factura_id, metodo_pago, monto, referencia=""):
         factura = Factura.objects.get(id=factura_id)
 
-        Pago.objects.create(
+        pago = Pago.objects.create(
             factura=factura,
-            metodo=metodo_pago,
+            metodo=metodo_pago,    # Aquí ya es MetodoPago
             monto=monto,
             referencia=referencia
         )
+
+        if factura.estado == "PAGADA":
+            context = {
+                "cliente_nombre": factura.cliente.get_full_name(),
+                "factura_id": factura.id,
+                "total": factura.total,
+                "metodo_pago": pago.metodo.nombre,  
+                "fecha_pago": pago.fecha.strftime("%d/%m/%Y %H:%M"),  
+                "detalles": factura.detalles.all(),
+            }
+
+            FacturaPagadaEmail(context, factura.cliente.email).send()
 
         return factura
     

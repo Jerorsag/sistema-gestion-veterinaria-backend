@@ -1,11 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-
 from transacciones.services.factura_service import FacturaService
 from transacciones.serializers.factura_serializer import FacturaSerializer
-
 from transacciones.models.metodo_pago import MetodoPago
+from transacciones.models.factura import Factura
+from notificaciones.patterns.strategies.factura_email import FacturaEnvioManualEmail
 
 class PagarFacturaView(APIView):
 
@@ -47,3 +47,24 @@ class AnularFacturaView(APIView):
     def post(self, request, factura_id):
         factura = FacturaService.anular_factura(factura_id)
         return Response(FacturaSerializer(factura).data)
+    
+
+class EnviarFacturaEmailView(APIView):
+    def post(self, request, factura_id):
+        try:
+            factura = Factura.objects.get(id=factura_id)
+
+            context = {
+                "cliente_nombre": factura.cliente.get_full_name(),
+                "factura_id": factura.id,
+                "total": factura.total,
+                "fecha": factura.fecha.strftime("%d/%m/%Y %H:%M"),
+                "estado": factura.estado,
+                "detalles": factura.detalles.all()
+            }
+
+            FacturaEnvioManualEmail(context, factura.cliente.email).send()
+
+            return Response({"message": "Factura enviada correctamente"})
+        except Factura.DoesNotExist:
+            return Response({"error": "Factura no encontrada"}, status=404)
