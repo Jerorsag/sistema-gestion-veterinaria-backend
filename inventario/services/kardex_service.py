@@ -1,8 +1,17 @@
-from inventario.models import Notificacion
-from inventario.patrones import GestorInventario  # ✨ NUEVO IMPORT
+from inventario.patrones import GestorInventario
+from inventario.validators.kardex_validator import KardexValidator
 
 
 class KardexService:
+    """
+    Servicio que procesa los movimientos de Kardex.
+
+    Responsabilidades:
+    - Validar que el producto esté activo
+    - Actualizar stock
+    - Crear notificaciones
+    - Registrar en GestorInventario
+    """
 
     def __init__(self):
         from inventario.services.stock_service import StockService
@@ -10,18 +19,81 @@ class KardexService:
 
         self.stock_service = StockService()
         self.notificacion_service = NotificacionService()
-        self.gestor = GestorInventario()  # ✨ Singleton
+        self.gestor = GestorInventario()
+        self.validator = KardexValidator()
 
-    def procesar_movimiento(self, kardex, usuario=None):  # ✨ usuario opcional
+    def procesar_movimiento(self, kardex, usuario=None):
+        """
+        Procesa un movimiento de Kardex (entrada o salida).
+
+        Validaciones:
+        - Producto debe estar activo
+        - Cantidad debe ser positiva
+        - Para salidas: debe haber stock suficiente
+
+        Args:
+            kardex: Instancia del Kardex a procesar
+            usuario: Usuario que realiza la operación (opcional)
+
+        Raises:
+            ValidationError: Si alguna validación falla
+        """
+        producto = kardex.producto
+        cantidad = int(kardex.cantidad)
+
+        #  Validar que el producto esté ACTIVO
+        self.validator.validar_producto_activo(producto)
+
+        #  Validar cantidad positiva
+        self.validator.validar_cantidad_positiva(cantidad)
+
+        #  Validar stock suficiente para salidas
+        if kardex.tipo == 'salida':
+            self.validator.validar_stock_suficiente(producto, cantidad)
+
+        print(f"✅ Validaciones OK - Procesando {kardex.tipo}")
+
+        #  Actualizar stock según el tipo
+        if kardex.tipo == 'entrada':
+            self.stock_service.agregar_stock(producto, cantidad, usuario=usuario)
+        elif kardex.tipo == 'salida':
+            self.stock_service.restar_stock(producto, cantidad, usuario=usuario)
+
+        #  Verificar alertas
+        self.notificacion_service.verificar_alertas_producto(producto)
+
+        #  Registrar en Singleton
+        self.gestor.registrar_movimiento(
+            producto=producto,
+            cantidad=cantidad,
+            tipo=f"KARDEX_{kardex.tipo.upper()}",
+            usuario=usuario
+        )
+
+    def anular_movimiento(self, kardex, usuario=None):
+        """
+        Anula un movimiento de Kardex (revierte los cambios).
+
+        Args:
+            kardex: Instancia del Kardex a anular
+            usuario: Usuario que realiza la operación (opcional)
+        """
+        # Evitar anular dos veces
+        if kardex.detalle and "ANULADO" in kardex.detalle:
+            return
 
         producto = kardex.producto
-        cantidad = int(kardex.cantidad)  # ✔ Conversión a entero
+        cantidad = int(kardex.cantidad)
 
-        # Actualizar stock según el tipo
+        # Revertir efecto en stock (sin validar si está activo)
         if kardex.tipo == 'entrada':
-            self.stock_service.agregar_stock(producto, cantidad)
+            self.stock_service.restar_stock(producto, cantidad, usuario=usuario)
         elif kardex.tipo == 'salida':
-            self.stock_service.restar_stock(producto, cantidad)
+            self.stock_service.agregar_stock(producto, cantidad, usuario=usuario)
+
+        # Marcar como ANULADO
+        kardex.detalle = f"{kardex.detalle or ''} - ANULADO"
+        kardex.save(update_fields=['detalle'])
 
         # Verificar alertas
         self.notificacion_service.verificar_alertas_producto(producto)
@@ -30,44 +102,6 @@ class KardexService:
         self.gestor.registrar_movimiento(
             producto=producto,
             cantidad=cantidad,
-            tipo=f"KARDEX_{kardex.tipo.upper()}",
-            usuario=usuario
-        )
-
-
-    def anular_movimiento(self, kardex, usuario=None):
-
-        # Evitar anular dos veces
-        if "ANULADO" in (kardex.detalle or ""):
-            return
-
-        producto = kardex.producto
-        cantidad = int(kardex.cantidad)
-
-        # Revertir efecto
-        if kardex.tipo == 'entrada':
-            self.stock_service.restar_stock(producto, cantidad)
-        else:
-            self.stock_service.agregar_stock(producto, cantidad)
-
-        kardex.detalle = f"{kardex.detalle or ''} - ANULADO"
-        kardex.save()
-
-        self.notificacion_service.verificar_alertas_producto(producto)
-
-        # Registrar en Singleton
-        self.gestor.registrar_movimiento(
-            producto=producto,
-            cantidad=cantidad,
             tipo=f"ANULACIÓN_{kardex.tipo.upper()}",
             usuario=usuario
-        )
-
-    # dentro de NotificacionService
-    def crear_info(self, titulo: str, mensaje: str):
-        Notificacion.objects.create(
-            titulo=titulo,
-            mensaje=mensaje,
-            modulo="inventario",
-            nivel="info"
         )

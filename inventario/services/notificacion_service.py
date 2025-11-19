@@ -7,7 +7,7 @@ class NotificacionService:
 
     def crear_info(self, titulo: str, mensaje: str):
         """Crea una notificación de información sin duplicados."""
-        Notificacion.objects.create(
+        Notificacion.objects.get_or_create(
             titulo=titulo,
             mensaje=mensaje,
             modulo="inventario",
@@ -29,7 +29,6 @@ class NotificacionService:
             modulo="inventario",
             nivel="error"
         )
-
 
     def verificar_alertas_producto(self, producto: Producto):
         """Verifica stock mínimo + vencimiento."""
@@ -76,7 +75,6 @@ class NotificacionService:
                 titulo__icontains="Producto por vencer",
                 mensaje__icontains=producto.nombre
             ).delete()
-
 
     def marcar_como_leida(self, notificacion_id: int):
         n = Notificacion.objects.filter(id=notificacion_id).first()

@@ -1,25 +1,42 @@
 from inventario.models import Producto
+from inventario.patrones import obtener_sujeto_inventario
 from inventario.services.notificacion_service import NotificacionService
 
 
 class StockService:
+    """
+    Servicio responsable de todas las operaciones relacionadas con el stock.
+    Ahora integra el patrón Observer para notificaciones automáticas.
+    """
 
     def __init__(self):
         self.notificaciones = NotificacionService()
+        self.sujeto = obtener_sujeto_inventario()  # Observer Pattern
 
-    def agregar_stock(self, producto: Producto, cantidad: int) -> None:
+    def agregar_stock(self, producto: Producto, cantidad: int, usuario=None) -> None:
+        """
+        Agrega stock a un producto.
+        """
 
         cantidad = int(cantidad)
-
         producto.stock += cantidad
         producto.save(update_fields=['stock'])
 
-        self.notificaciones.crear_info(
-            titulo=f"Entrada de stock: {producto.nombre}",
-            mensaje=f"Se agregaron {cantidad} unidades al producto '{producto.nombre}'."
-        )
+        # Notificar SOLO entrada
+        self.sujeto.notificar('entrada_stock', {
+            'producto': producto,
+            'cantidad': cantidad,
+            'usuario': usuario
+        })
+
+        # Verificar alertas
+        self.sujeto.notificar('stock_bajo', {'producto': producto})
+        self.sujeto.notificar('producto_vencido', {'producto': producto})
 
     def restar_stock(self, producto: Producto, cantidad: int) -> None:
+        """
+        Resta stock de un producto.
+        """
 
         cantidad = int(cantidad)
 
@@ -32,17 +49,12 @@ class StockService:
         producto.stock -= cantidad
         producto.save(update_fields=['stock'])
 
-        # Notificación informativa
-        self.notificaciones.crear_info(
-            titulo=f"Salida de stock: {producto.nombre}",
-            mensaje=f"Se descontaron {cantidad} unidades del producto '{producto.nombre}'."
-        )
+        # Notificar SOLO salida
+        self.sujeto.notificar('salida_stock', {
+            'producto': producto,
+            'cantidad': cantidad,
+        })
 
-    @staticmethod
-    def tiene_stock_suficiente(producto: Producto, cantidad: int) -> bool:
-        cantidad = int(cantidad)
-        return producto.stock >= cantidad
-
-    @staticmethod
-    def esta_en_stock_minimo(producto: Producto) -> bool:
-        return producto.stock <= producto.stock_minimo
+        # Verificar alertas
+        self.sujeto.notificar('stock_bajo', {'producto': producto})
+        self.sujeto.notificar('producto_vencido', {'producto': producto})

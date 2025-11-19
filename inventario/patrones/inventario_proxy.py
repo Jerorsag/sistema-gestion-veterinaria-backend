@@ -1,9 +1,3 @@
-"""
-inventario/patterns/inventario_proxy.py
-
-Proxy de Inventario que controla el acceso a operaciones sensibles.
-Patrón: Proxy Pattern
-"""
 from typing import Optional
 from django.contrib.auth.models import User
 from inventario.models import Producto
@@ -36,10 +30,6 @@ class InventarioProxy:
             producto: Producto a modificar
             cantidad: Cantidad a agregar o restar
             motivo: Motivo de la modificación
-
-        Raises:
-            PermissionError: Si el usuario no tiene permisos
-            ValueError: Si la cantidad es inválida
         """
         # Validar permisos
         self._validar_permisos_staff()
@@ -80,12 +70,6 @@ class InventarioProxy:
     def consultar_stock(self, producto: Producto) -> dict:
         """
         Consulta el stock de un producto (sin restricciones).
-
-        Args:
-            producto: Producto a consultar
-
-        Returns:
-            Diccionario con información del stock
         """
         return {
             'producto': producto.nombre,
@@ -98,14 +82,6 @@ class InventarioProxy:
     def ajustar_inventario(self, producto: Producto, stock_real: float, motivo: str):
         """
         Ajusta el stock basándose en un conteo físico (requiere permisos).
-
-        Args:
-            producto: Producto a ajustar
-            stock_real: Stock real contado físicamente
-            motivo: Motivo del ajuste (ej: "Inventario físico", "Corrección")
-
-        Raises:
-            PermissionError: Si el usuario no tiene permisos
         """
         self._validar_permisos_staff()
 
@@ -140,9 +116,6 @@ class InventarioProxy:
     def _validar_permisos_staff(self):
         """
         Valida que el usuario tenga permisos de staff.
-
-        Raises:
-            PermissionError: Si el usuario no es staff
         """
         if not self.usuario:
             raise PermissionError(
@@ -158,12 +131,6 @@ class InventarioProxy:
     def obtener_historial_operaciones(self, limite: int = 50):
         """
         Obtiene el historial de operaciones (requiere permisos).
-
-        Args:
-            limite: Número de operaciones a retornar
-
-        Returns:
-            Lista de operaciones
         """
         self._validar_permisos_staff()
         return self.gestor.obtener_historial(limite)

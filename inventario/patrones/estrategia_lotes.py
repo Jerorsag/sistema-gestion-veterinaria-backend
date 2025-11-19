@@ -1,6 +1,3 @@
-"""
-Estrategias para selección de lotes en el inventario.
-"""
 from abc import ABC, abstractmethod
 from datetime import date
 from typing import List, Optional
@@ -216,31 +213,18 @@ class GestorLotes:
     def __init__(self, estrategia: EstrategiaSeleccionLote):
         """
         Inicializa el gestor con una estrategia específica.
-
-        Args:
-            estrategia: Estrategia de selección a utilizar
         """
         self._estrategia = estrategia
 
     def cambiar_estrategia(self, estrategia: EstrategiaSeleccionLote):
         """
         Cambia la estrategia de selección en tiempo de ejecución.
-
-        Args:
-            estrategia: Nueva estrategia a utilizar
         """
         self._estrategia = estrategia
 
     def seleccionar_lote_para_salida(self, lotes: List[Lote], cantidad_requerida: float) -> List[tuple]:
         """
         Selecciona uno o más lotes para satisfacer una cantidad requerida.
-
-        Args:
-            lotes: Lista de lotes disponibles
-            cantidad_requerida: Cantidad total requerida
-
-        Returns:
-            Lista de tuplas (Lote, cantidad_a_usar)
         """
         resultado = []
         cantidad_pendiente = cantidad_requerida

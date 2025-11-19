@@ -1,9 +1,3 @@
-"""
-inventario/patterns/gestor_inventario.py
-
-Gestor de Inventario usando Patrón Singleton.
-Garantiza una única instancia para gestionar operaciones críticas del inventario.
-"""
 import logging
 from datetime import datetime
 from typing import Optional

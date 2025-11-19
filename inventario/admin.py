@@ -1,3 +1,6 @@
+"""
+inventario/admin.py - VERSIÓN SIN DUPLICADOS
+"""
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.urls import path
@@ -41,10 +44,13 @@ class ProductoAdmin(admin.ModelAdmin):
     )
 
     def save_model(self, request, obj, form, change):
-        """Guarda el producto con validaciones del ProductoService."""
+        """
+        Guarda el producto con validaciones del ProductoService.
+        """
         service = ProductoService()
         data = form.cleaned_data
 
+        # Validar datos
         errores = service.validar_datos_producto(
             data, producto_id=obj.pk if change else None
         )
@@ -60,53 +66,43 @@ class ProductoAdmin(admin.ModelAdmin):
 
             raise ValidationError(mensaje)
 
+        # Normalizar datos
         normalizados = service.normalizar_datos_producto(data)
         for key, value in normalizados.items():
             setattr(obj, key, value)
 
+        # Guardar UNA SOLA VEZ
         super().save_model(request, obj, form, change)
-
-        # PATRON: Registrar en el Singleton
-        gestor = GestorInventario()
-        gestor.registrar_movimiento(
-            producto=obj,
-            cantidad=0,
-            tipo="ADMIN_SAVE" if change else "ADMIN_CREATE",
-            usuario=request.user
-        )
 
     def has_delete_permission(self, request, obj=None):
         """Permite mostrar el botón eliminar."""
         return True
 
     def delete_model(self, request, obj):
-        """Soft delete: desactiva en lugar de eliminar."""
+        """
+        SOFT DELETE: Marca como INACTIVO en lugar de eliminar.
+
+        Cuando presiones "Eliminar":
+        - El producto NO se borra de la BD
+        - Solo se marca como activo=False
+        - No se pueden crear nuevos movimientos
+        """
         obj.activo = False
         obj.save(update_fields=["activo"])
 
-        # PATRON: Registrar en el Singleton
-        gestor = GestorInventario()
-        gestor.registrar_movimiento(
-            producto=obj,
-            cantidad=0,
-            tipo="ADMIN_DELETE",
-            usuario=request.user
+        from django.contrib import messages
+        messages.success(
+            request,
+            f"Producto '{obj.nombre}' desactivado. Ya no se pueden hacer movimientos."
         )
 
     def delete_queryset(self, request, queryset):
-
-        gestor = GestorInventario()
+        """Soft delete en masa."""
         for obj in queryset:
             obj.activo = False
             obj.save(update_fields=["activo"])
-            gestor.registrar_movimiento(
-                producto=obj,
-                cantidad=0,
-                tipo="ADMIN_DELETE_BULK",
-                usuario=request.user
-            )
 
-    # PATRON: URLs personalizadas para acciones con Patrones
+    # URLs personalizadas para acciones con Patrones
     def get_urls(self):
         """Agrega URLs personalizadas para las acciones admin."""
         urls = super().get_urls()
@@ -124,7 +120,6 @@ class ProductoAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
-    # PATRON: Vista para ajustar stock manualmente (usa Proxy Pattern)
     def ajustar_stock_view(self, request, producto_id):
         """Vista admin para ajustar stock usando InventarioProxy."""
         producto = self.get_object(request, producto_id)
@@ -138,7 +133,6 @@ class ProductoAdmin(admin.ModelAdmin):
                 cantidad = float(request.POST.get('cantidad'))
                 motivo = request.POST.get('motivo', 'Ajuste manual desde admin')
 
-                #  Usar Proxy Pattern
                 proxy = InventarioProxy(usuario=request.user)
                 resultado = proxy.modificar_stock(
                     producto=producto,
@@ -168,7 +162,6 @@ class ProductoAdmin(admin.ModelAdmin):
 
         return render(request, 'admin/inventario/ajustar_stock.html', context)
 
-    # PATRON: Vista para conteo físico (usa Proxy Pattern)
     def conteo_fisico_view(self, request, producto_id):
         """Vista admin para conteo físico usando InventarioProxy."""
         producto = self.get_object(request, producto_id)
@@ -182,7 +175,6 @@ class ProductoAdmin(admin.ModelAdmin):
                 stock_real = float(request.POST.get('stock_real'))
                 motivo = request.POST.get('motivo', 'Conteo físico desde admin')
 
-                # Usar Proxy Pattern
                 proxy = InventarioProxy(usuario=request.user)
                 resultado = proxy.ajustar_inventario(
                     producto=producto,
@@ -210,7 +202,6 @@ class ProductoAdmin(admin.ModelAdmin):
 
         return render(request, 'admin/inventario/conteo_fisico.html', context)
 
-
 # ==================== KARDEX ====================
 @admin.register(Kardex)
 class KardexAdmin(admin.ModelAdmin):
@@ -224,70 +215,53 @@ class KardexAdmin(admin.ModelAdmin):
     )
     list_filter = ["tipo", "fecha"]
     search_fields = ["detalle", "producto__nombre", 'producto__codigo_interno']
-
-
     readonly_fields = ('fecha',)
 
     def get_readonly_fields(self, request, obj=None):
         """
-        Si estamos EDITANDO (obj existe), bloquear producto, tipo y cantidad.
-        Si estamos CREANDO (obj es None), permitir editarlos.
+        Si estamos EDITANDO, bloquear campos críticos.
+        Si estamos CREANDO, solo fecha es readonly.
         """
-        if obj:  # EDITAR
+        if obj:  # Editar
             return ('fecha', 'producto', 'tipo', 'cantidad')
-        return ('fecha',)  # CREAR
-
-    def get_fields(self, request, obj=None):
-        """
-        Mostrar todos los campos correctamente tanto en creación como edición.
-        """
-        return ("producto", "tipo", "cantidad", "detalle", "fecha")
+        return ('fecha',)  # Crear
 
     def codigo_interno_producto(self, obj):
         return obj.producto.codigo_interno or '---'
+
     codigo_interno_producto.short_description = 'Código Interno'
 
     def save_model(self, request, obj, form, change):
         """
-        Usamos el KardexService al crear movimientos desde el admin.
+        Valida que el producto esté activo antes de guardar.
+        El signal post_save se encarga de procesar el movimiento.
         """
-        from inventario.services.kardex_service import KardexService
+        from django.core.exceptions import ValidationError
+        from inventario.validators.kardex_validator import KardexValidator
 
-        servicio = KardexService()
-
+        # Si es NUEVO (change=False), validar que el producto esté activo
         if not change:
-            # Creación → procesar entrada/salida correctamente
-            servicio.procesar_movimiento(obj, usuario=request.user)
+            validator = KardexValidator()
+            try:
+                validator.validar_producto_activo(obj.producto)
+            except ValidationError as e:
+                form.add_error('producto', str(e))
+                raise ValidationError(str(e))
 
+        # Guardar el Kardex
         super().save_model(request, obj, form, change)
 
     def has_delete_permission(self, request, obj=None):
         return True
 
     def delete_model(self, request, obj):
-        """Soft delete: anula el movimiento y registra en Singleton."""
+        """Soft delete: anula el movimiento."""
         obj.delete()
-
-        gestor = GestorInventario()
-        gestor.registrar_movimiento(
-            producto=obj.producto,
-            cantidad=obj.cantidad,
-            tipo=f"ADMIN_ANULAR_{obj.tipo.upper()}",
-            usuario=request.user
-        )
 
     def delete_queryset(self, request, queryset):
         """Anula múltiples registros."""
-        gestor = GestorInventario()
         for obj in queryset:
             obj.delete()
-            gestor.registrar_movimiento(
-                producto=obj.producto,
-                cantidad=obj.cantidad,
-                tipo=f"ADMIN_ANULAR_BULK_{obj.tipo.upper()}",
-                usuario=request.user
-            )
-
 
 # ==================== MARCA ====================
 @admin.register(Marca)

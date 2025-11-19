@@ -38,7 +38,7 @@ urlpatterns = [
     # API v1
     #path('api/v1/', include('usuarios.urls')),
     #path('api/v1/', include('mascotas.urls')),
-    path('api/', include('inventario.urls')),
+    path('api/v1/', include('inventario.urls')),
 ]
 
 # 👇 Agrega esto al final del archivo
