@@ -5,10 +5,8 @@ from datetime import timedelta
 # Importaciones de modelos de otras apps
 from usuarios.models import Usuario, Rol, Cliente, UsuarioRol, Veterinario
 from mascotas.models import Mascota, Especie, Raza
-
-# Importaciones de nuestros modelos
 from citas.models import Servicio, Cita
-from citas.patterns.state import EstadoCita # <-- Importamos el State
+from citas.patterns.state import EstadoCita 
 
 class CitasAPITestCase(APITestCase):
     """

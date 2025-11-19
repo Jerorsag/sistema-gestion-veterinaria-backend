@@ -9,7 +9,6 @@ from .models import Cita, Servicio
 from . import serializers
 from . import services
 
-
 class CitaViewSet(viewsets.ModelViewSet):
     """
     API Endpoint para la gestión de Citas (CRUD y acciones).
@@ -153,7 +152,20 @@ class CitaViewSet(viewsets.ModelViewSet):
 
 
 class ServicioViewSet(viewsets.ModelViewSet):
+
     """ Endpoint"""
     queryset = Servicio.objects.all()
-    serializer_class = serializers.ServicioSerializer # Usa el serializer de lectura
     permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+
+        """
+        Define qué serializer usar según la acción (POST, GET, etc).
+        """
+        # Si la acción es crear, actualizar o actualizar parcialmente
+        if self.action in ['create', 'update', 'partial_update']:
+            # Usa el serializer de ESCRITURA
+            return serializers.ServicioWriteSerializer
+
+        # Para todas las demás acciones (list, retrieve), usa el de LECTURA
+        return serializers.ServicioSerializer
