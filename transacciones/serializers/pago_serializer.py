@@ -8,8 +8,10 @@ class PagoSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'factura',
-            'metodo_pago',
+            'metodo',
             'monto',
-            'fecha'
+            'fecha',
+            'aprobado',
+            'referencia'
         ]
         read_only_fields = ['fecha']

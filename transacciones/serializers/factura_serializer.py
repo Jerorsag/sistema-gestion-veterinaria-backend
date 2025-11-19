@@ -4,7 +4,8 @@ from transacciones.serializers.detalle_factura_serializer import DetalleFacturaS
 
 
 class FacturaSerializer(serializers.ModelSerializer):
-    detalles = DetalleFacturaSerializer(many=True)
+    cliente = serializers.PrimaryKeyRelatedField(read_only=True)
+    detalles = DetalleFacturaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Factura
@@ -18,7 +19,7 @@ class FacturaSerializer(serializers.ModelSerializer):
             'total',
             'detalles'
         ]
-        read_only_fields = ['total', 'fecha']
+        read_only_fields = ['total', 'fecha', 'cliente']
 
     def create(self, validated_data):
         detalles_data = validated_data.pop('detalles', [])
@@ -33,6 +34,6 @@ class FacturaSerializer(serializers.ModelSerializer):
             })
 
         # Forzar recálculo del total
-        factura.actualizar_total()
+        factura.recalcular_totales()
 
         return factura

@@ -37,7 +37,7 @@ class PagarFacturaView(APIView):
         )
 
         return Response(
-            {"message": "Factura pagada correctamente.", "factura_id": factura.id},
+            {"message": "Factura pagada correctamente.", "factura_id": factura.id, "estado": factura.estado},
             status=status.HTTP_200_OK
         )
 
@@ -65,6 +65,9 @@ class EnviarFacturaEmailView(APIView):
 
             FacturaEnvioManualEmail(context, factura.cliente.email).send()
 
-            return Response({"message": "Factura enviada correctamente"})
+            return Response(
+                {"mensaje": "Factura enviada correctamente."},
+                status=status.HTTP_200_OK
+            )
         except Factura.DoesNotExist:
             return Response({"error": "Factura no encontrada"}, status=404)

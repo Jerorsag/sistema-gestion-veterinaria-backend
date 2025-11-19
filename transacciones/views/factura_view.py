@@ -9,6 +9,10 @@ class FacturaListCreateView(generics.ListCreateAPIView):
     ).prefetch_related('detalles')
     serializer_class = FacturaSerializer
 
+    def perform_create(self, serializer):
+        # Asignar el cliente autenticado SIEMPRE
+        serializer.save(cliente=self.request.user)
+
 
 class FacturaDetailView(generics.RetrieveAPIView):
     queryset = Factura.objects.all().select_related(
