@@ -1,10 +1,12 @@
 from rest_framework import status, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.db.models import Q
 
 from inventario.models import Kardex
 from inventario.serializers import KardexSerializer
+from inventario.services import KardexService
 
 
 class KardexViewSet(viewsets.ModelViewSet):
@@ -24,15 +26,13 @@ class KardexViewSet(viewsets.ModelViewSet):
         return Kardex.objects.all().order_by('-fecha')
 
     def destroy(self, request, *args, **kwargs):
+        kardex = self.get_object()
 
-        instance = self.get_object()
+        # Si ya está anulado → no permitir eliminar
+        if kardex.detalle and "ANULADO" in kardex.detalle:
+            raise ValidationError("No se puede eliminar un movimiento ANULADO.")
 
-        # Soft delete (marca como ANULADO y ajusta stock)
-        instance.delete()
-
-        # Se recarga desde la base de datos
-        instance.refresh_from_db()
-
-        # Se devuelve el Kardex completo
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        # Si no está anulado → anularlo en lugar de eliminar
+        service = KardexService()
+        service.anular_movimiento(kardex, usuario=request.user)
+        return Response({"detail": "Movimiento anulado correctamente."}, status=200)

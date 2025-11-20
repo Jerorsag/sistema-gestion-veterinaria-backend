@@ -17,13 +17,11 @@ class Kardex(models.Model):
     def __str__(self):
         return f"{self.tipo.capitalize()} - {self.producto.nombre}"
 
-        # Importar el servicio
-        from inventario.services.kardex_service import KardexService
-
-        servicio = KardexService()
-        servicio.anular_movimiento(self)
-
     class Meta:
         verbose_name = "Kardex"
         verbose_name_plural = "Kardex"
         ordering = ['-fecha']
+
+    def delete(self, *args, **kwargs):
+        from rest_framework.exceptions import ValidationError
+        raise ValidationError("Los movimientos no pueden eliminarse directamente. Deben anularse.")

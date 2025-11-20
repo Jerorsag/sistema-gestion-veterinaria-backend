@@ -1,3 +1,5 @@
+from rest_framework.exceptions import ValidationError
+
 from inventario.patrones import GestorInventario
 from inventario.validators.kardex_validator import KardexValidator
 
@@ -25,18 +27,6 @@ class KardexService:
     def procesar_movimiento(self, kardex, usuario=None):
         """
         Procesa un movimiento de Kardex (entrada o salida).
-
-        Validaciones:
-        - Producto debe estar activo
-        - Cantidad debe ser positiva
-        - Para salidas: debe haber stock suficiente
-
-        Args:
-            kardex: Instancia del Kardex a procesar
-            usuario: Usuario que realiza la operación (opcional)
-
-        Raises:
-            ValidationError: Si alguna validación falla
         """
         producto = kardex.producto
         cantidad = int(kardex.cantidad)
@@ -51,13 +41,19 @@ class KardexService:
         if kardex.tipo == 'salida':
             self.validator.validar_stock_suficiente(producto, cantidad)
 
-        print(f"✅ Validaciones OK - Procesando {kardex.tipo}")
+        print(f"Validaciones OK - Procesando {kardex.tipo}")
 
         #  Actualizar stock según el tipo
         if kardex.tipo == 'entrada':
             self.stock_service.agregar_stock(producto, cantidad)
         elif kardex.tipo == 'salida':
             self.stock_service.restar_stock(producto, cantidad)
+
+        # 🔔 NOTIFICACIÓN DEL MOVIMIENTO (AGREGADA)
+        self.notificacion_service.crear_info(
+            f"Movimiento registrado: {producto.nombre}",
+            f"Se realizó una {kardex.tipo} de {cantidad} unidades del producto '{producto.nombre}'."
+        )
 
         #  Verificar alertas
         self.notificacion_service.verificar_alertas_producto(producto)
@@ -73,14 +69,10 @@ class KardexService:
     def anular_movimiento(self, kardex, usuario=None):
         """
         Anula un movimiento de Kardex (revierte los cambios).
-
-        Args:
-            kardex: Instancia del Kardex a anular
-            usuario: Usuario que realiza la operación (opcional)
         """
         # Evitar anular dos veces
         if kardex.detalle and "ANULADO" in kardex.detalle:
-            return
+            raise ValidationError("No se puede eliminar o anular un movimiento que ya está ANULADO.")
 
         producto = kardex.producto
         cantidad = int(kardex.cantidad)
@@ -94,6 +86,12 @@ class KardexService:
         # Marcar como ANULADO
         kardex.detalle = f"{kardex.detalle or ''} - ANULADO"
         kardex.save(update_fields=['detalle'])
+
+        # 🔔 NOTIFICACIÓN DE ANULACIÓN (AGREGADA)
+        self.notificacion_service.crear_warning(
+            f"Movimiento anulado: {producto.nombre}",
+            f"Se anuló un movimiento de tipo {kardex.tipo} por {cantidad} unidades del producto '{producto.nombre}'."
+        )
 
         # Verificar alertas
         self.notificacion_service.verificar_alertas_producto(producto)
