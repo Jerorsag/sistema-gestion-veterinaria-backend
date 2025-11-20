@@ -25,7 +25,7 @@ def notificar_observadores(evento: str, cita: Cita):
             'servicio'
         ).get(id=cita.id)
 
-        print(f"---  OBSERVADOR: Evento '{evento}' detectado para Cita {cita.id} ---")
+        print(f"--- 📣 OBSERVADOR: Evento '{evento}' detectado para Cita {cita.id} ---")
 
         # Aquí, el "Observador" decide qué "Sub-Observador" llamar
         if evento == "CITA_CREADA":
@@ -37,7 +37,7 @@ def notificar_observadores(evento: str, cita: Cita):
         elif evento == "CITA_REAGENDADA":
             CitaReagendadaEmail(cita_con_datos).send()
 
-        print("---  Notificación enviada ---")
+        print("--- 📬 Notificación enviada ---")
 
     except Cita.DoesNotExist:
         print(f"Error de Observador: No se encontró la Cita {cita.id} para notificar.")
