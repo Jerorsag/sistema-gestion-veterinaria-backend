@@ -49,7 +49,7 @@ class KardexService:
         elif kardex.tipo == 'salida':
             self.stock_service.restar_stock(producto, cantidad)
 
-        # 🔔 NOTIFICACIÓN DEL MOVIMIENTO (AGREGADA)
+        # NOTIFICACIÓN DEL MOVIMIENTO (AGREGADA)
         self.notificacion_service.crear_info(
             f"Movimiento registrado: {producto.nombre}",
             f"Se realizó una {kardex.tipo} de {cantidad} unidades del producto '{producto.nombre}'."
@@ -87,7 +87,7 @@ class KardexService:
         kardex.detalle = f"{kardex.detalle or ''} - ANULADO"
         kardex.save(update_fields=['detalle'])
 
-        # 🔔 NOTIFICACIÓN DE ANULACIÓN (AGREGADA)
+        # NOTIFICACIÓN DE ANULACIÓN (AGREGADA)
         self.notificacion_service.crear_warning(
             f"Movimiento anulado: {producto.nombre}",
             f"Se anuló un movimiento de tipo {kardex.tipo} por {cantidad} unidades del producto '{producto.nombre}'."
