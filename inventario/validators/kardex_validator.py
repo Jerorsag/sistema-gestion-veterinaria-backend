@@ -19,6 +19,16 @@ class KardexValidator:
             )
 
     @staticmethod
+    def validar_movimiento_no_anulado(kardex):
+        """
+        Evita eliminar un movimiento ya anulado.
+        """
+        if kardex.detalle and "ANULADO" in kardex.detalle:
+            raise ValidationError(
+                "Este movimiento ya está anulado y no puede eliminarse su registro."
+            )
+
+    @staticmethod
     def validar_cantidad_positiva(cantidad):
         """
         Valida que la cantidad sea positiva.

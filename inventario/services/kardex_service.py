@@ -55,9 +55,9 @@ class KardexService:
 
         #  Actualizar stock según el tipo
         if kardex.tipo == 'entrada':
-            self.stock_service.agregar_stock(producto, cantidad, usuario=usuario)
+            self.stock_service.agregar_stock(producto, cantidad)
         elif kardex.tipo == 'salida':
-            self.stock_service.restar_stock(producto, cantidad, usuario=usuario)
+            self.stock_service.restar_stock(producto, cantidad)
 
         #  Verificar alertas
         self.notificacion_service.verificar_alertas_producto(producto)
@@ -87,9 +87,9 @@ class KardexService:
 
         # Revertir efecto en stock (sin validar si está activo)
         if kardex.tipo == 'entrada':
-            self.stock_service.restar_stock(producto, cantidad, usuario=usuario)
+            self.stock_service.restar_stock(producto, cantidad)
         elif kardex.tipo == 'salida':
-            self.stock_service.agregar_stock(producto, cantidad, usuario=usuario)
+            self.stock_service.agregar_stock(producto, cantidad)
 
         # Marcar como ANULADO
         kardex.detalle = f"{kardex.detalle or ''} - ANULADO"

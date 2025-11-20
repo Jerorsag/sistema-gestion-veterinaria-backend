@@ -1,4 +1,6 @@
 from django.db import models
+from rest_framework.exceptions import ValidationError
+
 
 class Kardex(models.Model):
     TIPO_CHOICES = [
@@ -14,11 +16,6 @@ class Kardex(models.Model):
 
     def __str__(self):
         return f"{self.tipo.capitalize()} - {self.producto.nombre}"
-
-    def delete(self, using=None, keep_parents=False):
-        # Si ya está anulado → error
-        if self.detalle and "ANULADO" in self.detalle:
-            raise ValueError("Este movimiento ya está anulado y no puede eliminarse su registro.")
 
         # Importar el servicio
         from inventario.services.kardex_service import KardexService
