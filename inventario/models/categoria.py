@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 
 class Categoria(models.Model):
     descripcion = models.CharField(max_length=100, unique=True)
-    color = models.CharField(max_length=20, null=True, blank=True)
+    color = models.CharField(max_length=20, blank=True)
 
     def save(self, *args, **kwargs):
         # Normalizar a Title Case

@@ -19,18 +19,13 @@ def procesar_kardex_al_guardar(sender, instance, created, **kwargs):
     if getattr(instance, '_ya_procesado', False):
         return
 
-    try:
-        from inventario.services.kardex_service import KardexService
+    from inventario.services.kardex_service import KardexService
 
-        # Marcar antes de procesar para evitar re-entradas si algo hace saves recursivos.
-        instance._ya_procesado = True
+    # Marcar antes de procesar para evitar re-entradas si algo hace saves recursivos.
+    instance._ya_procesado = True
 
-        servicio = KardexService()
-        servicio.procesar_movimiento(instance)
-
-    except Exception as e:
-        # Propagar excepción para que el caller lo sepa; opcionalmente usar logging.
-        raise
+    servicio = KardexService()
+    servicio.procesar_movimiento(instance)
 
 
 @receiver(pre_delete, sender=Kardex)
@@ -44,12 +39,7 @@ def anular_kardex_al_eliminar(sender, instance, **kwargs):
     if instance.detalle and "ANULADO" in instance.detalle:
         return
 
-    try:
-        from inventario.services.kardex_service import KardexService
+    from inventario.services.kardex_service import KardexService
 
-        servicio = KardexService()
-        servicio.anular_movimiento(instance)
-
-    except Exception as e:
-        # Propagar excepción para visibilidad; opcionalmente usar logging.
-        raise
+    servicio = KardexService()
+    servicio.anular_movimiento(instance)

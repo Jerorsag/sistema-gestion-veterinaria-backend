@@ -53,7 +53,3 @@ class ProductoValidator:
                 f'El precio de compra ({precio_compra}) debe ser menor '
                 f'al precio de venta ({precio_venta}).'
             )
-
-    @staticmethod
-    def validar_producto(_):
-        pass

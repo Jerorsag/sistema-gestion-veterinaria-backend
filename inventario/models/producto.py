@@ -4,13 +4,13 @@ from django.db import models
 
 class Producto(models.Model):
     nombre = models.CharField(max_length=150, default="sin nombre")
-    descripcion = models.TextField(null=True, blank=True)
+    descripcion = models.TextField(blank=True)
     marca = models.ForeignKey('Marca', on_delete=models.CASCADE)
     categoria = models.ForeignKey('Categoria', on_delete=models.CASCADE)
     stock = models.IntegerField(default=0)
     stock_minimo = models.IntegerField(default=0)
-    codigo_barras = models.CharField(max_length=50, null=True, blank=True)
-    codigo_interno = models.CharField(max_length=50, null=True, blank=True)
+    codigo_barras = models.CharField(max_length=50, blank=True)
+    codigo_interno = models.CharField(max_length=50, blank=True)
     precio_venta = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     precio_compra = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     fecha_vencimiento = models.DateField(null=True, blank=True)
@@ -22,7 +22,6 @@ class Producto(models.Model):
         """
         self.activo = False
         self.save(update_fields=["activo"])
-        return
 
 
     def save(self, *args, **kwargs):

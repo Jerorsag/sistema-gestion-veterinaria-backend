@@ -20,13 +20,13 @@ class InventarioConfig(AppConfig):
         1. Importar signals (para registrarlos automáticamente)
         2. Inicializar patrones (Observer, Singleton)
         """
-        # ✅ Importar signals para registrarlos
+        # Importar signals para registrarlos
         import inventario.signals.kardex_signals
 
-        # ✅ Inicializar Observer Pattern
+        # Inicializar Observer Pattern
         from inventario.patrones import obtener_sujeto_inventario
         obtener_sujeto_inventario()
 
-        # ✅ Inicializar Singleton Pattern
+        # Inicializar Singleton Pattern
         from inventario.patrones import GestorInventario
         GestorInventario()

@@ -35,7 +35,7 @@ class MarcaViewSet(viewsets.ModelViewSet):
         # Validar duplicados
         try:
             MarcaValidator.validar_descripcion_unica(descripcion)
-        except Exception as e:
+        except Exception:
             return Response(
                 {"mensaje": "duplicado", "campo": "descripcion"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -68,7 +68,7 @@ class MarcaViewSet(viewsets.ModelViewSet):
         # Validar duplicados excluyendo la instancia actual
         try:
             MarcaValidator.validar_descripcion_unica(nueva_desc, marca_id=instancia.pk)
-        except Exception as e:
+        except Exception:
             return Response(
                 {"mensaje": "duplicado", "campo": "descripcion"},
                 status=status.HTTP_400_BAD_REQUEST

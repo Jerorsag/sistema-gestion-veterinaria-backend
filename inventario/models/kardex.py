@@ -9,7 +9,7 @@ class Kardex(models.Model):
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
     fecha = models.DateTimeField(auto_now_add=True)
     cantidad = models.IntegerField()
-    detalle = models.TextField(blank=True, null=True)
+    detalle = models.TextField(blank=True)
     producto = models.ForeignKey('Producto', on_delete=models.CASCADE, related_name='movimientos')
 
     def __str__(self):
@@ -25,8 +25,6 @@ class Kardex(models.Model):
 
         servicio = KardexService()
         servicio.anular_movimiento(self)
-
-        return
 
     class Meta:
         verbose_name = "Kardex"

@@ -2,7 +2,7 @@
 inventario/views/lote_views.py
 
 ViewSet para gestionar lotes usando Strategy Pattern.
-✨ NUEVO: Endpoints para usar las estrategias de selección de lotes
+Endpoints para usar las estrategias de selección de lotes
 """
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -13,6 +13,11 @@ from datetime import date
 from inventario.models import Producto
 from inventario.services.lote_service import LoteService
 from inventario.patrones import Lote
+
+
+# Constantes para mensajes de error
+ERROR_CAMPOS_REQUERIDOS = 'Se requiere producto_id y cantidad_requerida'
+ERROR_PRODUCTO_NO_ENCONTRADO = 'Producto no encontrado'
 
 
 class LoteViewSet(viewsets.ViewSet):
@@ -59,7 +64,7 @@ class LoteViewSet(viewsets.ViewSet):
         # Validaciones
         if not producto_id or not cantidad_requerida:
             return Response(
-                {'error': 'Se requiere producto_id y cantidad_requerida'},
+                {'error': ERROR_CAMPOS_REQUERIDOS},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -67,7 +72,7 @@ class LoteViewSet(viewsets.ViewSet):
             producto = Producto.objects.get(id=producto_id, activo=True)
         except Producto.DoesNotExist:
             return Response(
-                {'error': 'Producto no encontrado'},
+                {'error': ERROR_PRODUCTO_NO_ENCONTRADO},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -105,7 +110,7 @@ class LoteViewSet(viewsets.ViewSet):
 
         if not producto_id or not cantidad_requerida:
             return Response(
-                {'error': 'Se requiere producto_id y cantidad_requerida'},
+                {'error': ERROR_CAMPOS_REQUERIDOS},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -113,7 +118,7 @@ class LoteViewSet(viewsets.ViewSet):
             producto = Producto.objects.get(id=producto_id, activo=True)
         except Producto.DoesNotExist:
             return Response(
-                {'error': 'Producto no encontrado'},
+                {'error': ERROR_PRODUCTO_NO_ENCONTRADO},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -151,7 +156,7 @@ class LoteViewSet(viewsets.ViewSet):
 
         if not producto_id or not cantidad_requerida:
             return Response(
-                {'error': 'Se requiere producto_id y cantidad_requerida'},
+                {'error': ERROR_CAMPOS_REQUERIDOS},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -159,7 +164,7 @@ class LoteViewSet(viewsets.ViewSet):
             producto = Producto.objects.get(id=producto_id, activo=True)
         except Producto.DoesNotExist:
             return Response(
-                {'error': 'Producto no encontrado'},
+                {'error': ERROR_PRODUCTO_NO_ENCONTRADO},
                 status=status.HTTP_404_NOT_FOUND
             )
 

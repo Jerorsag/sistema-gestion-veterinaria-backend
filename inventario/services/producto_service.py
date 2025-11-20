@@ -27,8 +27,6 @@ class ProductoService:
 
     def validar_datos_producto(self, data: dict, producto_id=None) -> dict:
 
-        errores = {}
-
         # Normalizar texto y códigos
         nombre = self.normalizacion.normalizar_texto(data.get("nombre", ""))
         codigo_barras = (

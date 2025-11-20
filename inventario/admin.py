@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.urls import path
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.utils.html import format_html
 
 from .models import Marca, Categoria, Producto, Kardex, Notificacion
 from inventario.services.producto_service import ProductoService
@@ -273,8 +274,19 @@ class MarcaAdmin(admin.ModelAdmin):
 # ==================== CATEGORIA ====================
 @admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):
-    list_display = ("descripcion", "color")
+    list_display = ("descripcion", "mostrar_color")
     search_fields = ("descripcion",)
+
+    def mostrar_color(self, obj):
+        """Muestra el color como un cuadro en lugar de texto."""
+        if obj.color:
+            return format_html(
+                '<div style="width: 30px; height: 20px; background-color: {}; border: 1px solid #000;"></div>',
+                obj.color
+            )
+        return '-'
+
+    mostrar_color.short_description = 'Color'
 
 
 # ==================== NOTIFICACION ====================
