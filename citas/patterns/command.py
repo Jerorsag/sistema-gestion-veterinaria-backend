@@ -135,38 +135,9 @@ def reagendar_cita(cita_id: str, nueva_fecha_hora_str: str, usuario: Usuario) ->
     if not es_propietario and not es_rol_administrativo:
         raise PermissionDenied("No tienes permiso para reagendar esta cita.")
 
-    # --- Lógica de Negocio (Manejo Robusto de Fechas) ---
-    fecha_hora_input = nueva_fecha_hora_str
-    nueva_fecha_hora = None
 
-    if isinstance(fecha_hora_input, str):
-        # Si viene como string (desde JSON), limpiamos la Z para evitar doble aware
-        # O lo manejamos con lógica condicional
-        fecha_str = fecha_hora_input.rstrip("Z")
-        try:
-            parsed_date = datetime.fromisoformat(fecha_str)
-        except ValueError:
-            raise ValidationError("Formato de fecha inválido. Usa: YYYY-MM-DDThh:mm:ss")
-
-        if timezone.is_naive(parsed_date):  # Si no tiene zona horaria
-            nueva_fecha_hora = timezone.make_aware(parsed_date)
-        else:
-            # Si ya tiene zona horaria, la usamos
-            nueva_fecha_hora = parsed_date
-
-    elif isinstance(fecha_hora_input, datetime):
-        # Si ya viene como datetime (DRF lo parseó)
-        nueva_fecha_hora = fecha_hora_input if timezone.is_aware(fecha_hora_input) else timezone.make_aware(fecha_hora_input)
-
-    else:
-        raise ValidationError("El campo 'fecha_hora' tiene un tipo no válido.")
-
-    # Validar Disponibilidad (Reutilizando Composite)
     horarios_libres = obtener_horarios_disponibles(cita.veterinario.id, nueva_fecha_hora.date())
-    hora_solicitada = nueva_fecha_hora.strftime("%H:%M")
 
-    if hora_solicitada not in horarios_libres:
-        raise ValidationError(f"Conflicto de Horario: El veterinario no está disponible a las {hora_solicitada}.")
 
     # 2. Actualizar
     cita.fecha_hora = nueva_fecha_hora

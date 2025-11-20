@@ -10,7 +10,6 @@ from rest_framework.permissions import IsAuthenticated
 from consultas.models import Examen
 from consultas.serializers.examen_serializers import ExamenSerializer, ExamenCreateSerializer
 
-
 class ExamenViewSet(viewsets.ModelViewSet):
     """
     para gestión de exámenes médicos.

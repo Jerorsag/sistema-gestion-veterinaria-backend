@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Consentimiento informado</title>
+</head>
+<body>
+    <h3>Hola, {{ propietario_nombre }}!</h3>
+
+<p>
+    El veterinario <b>{{ veterinario_nombre }}</b> ha finalizado la consulta
+    para <b>{{ mascota_nombre }}</b> y solicita tu consentimiento sobre
+    el diagnóstico y tratamiento:
+</p>
+<blockquote>
+    <p><b>Diagnóstico:</b> {{ diagnostico }}</p>
+</blockquote>
+
+<p>
+    Por favor, revisa los detalles y confirma tu consentimiento
+    haciendo clic en el botón de abajo.
+</p>
+
+<a
+    href="{{ confirmation_url }}"
+    style="background-color: #377fc6; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block; border-radius: 8px; font-weight: bold;"
+>
+    Confirmar Consentimiento
+</a>
+
+<p style="font-size: 0.8em; color: #777;">
+    Si no puedes ver el botón, copia y pega este enlace en tu navegador:
+    <br>
+    {{ confirmation_url }}
+</p>
+</body>
+</html>

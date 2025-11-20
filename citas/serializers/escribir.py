@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 import datetime
-from rest_framework.exceptions import ValidationError, PermissionDenied 
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from citas.models import Cita,Servicio
 from ..services import agendar_nueva_cita, reagendar_cita
 from citas.patterns.state import EstadoCita
@@ -69,7 +69,7 @@ class ReagendarCitaSerializer(serializers.Serializer):
             raise e
         except Exception as e:
             raise serializers.ValidationError(f"Error inesperado al reagendar: {e}")
-        
+
 class ServicioWriteSerializer(serializers.ModelSerializer):
     """
     Serializer para CREAR (POST) Servicios.

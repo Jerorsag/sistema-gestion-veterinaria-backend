@@ -6,7 +6,7 @@ from datetime import timedelta
 from usuarios.models import Usuario, Rol, Cliente, UsuarioRol, Veterinario
 from mascotas.models import Mascota, Especie, Raza
 from citas.models import Servicio, Cita
-from citas.patterns.state import EstadoCita 
+from citas.patterns.state import EstadoCita
 
 class CitasAPITestCase(APITestCase):
     """

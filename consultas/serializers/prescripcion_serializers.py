@@ -14,15 +14,15 @@ class PrescripcionListSerializer(serializers.ModelSerializer):
     """
     Serializer simplificado para listar prescripciones.
     """
-    producto_nombre = serializers.CharField(
-        source='medicamento.nombre',
+    producto_nombre = serializers.CharField(source='medicamento.nombre',
         read_only=True
     )
+
     class Meta:
         model = Prescripcion
         fields = [
             'id',
-            'medicamento',  # Este campo sigue llamándose así en el modelo
+            'medicamento',
             'producto_nombre',
             'cantidad',
             'indicaciones',
@@ -38,12 +38,12 @@ class PrescripcionSerializer(serializers.ModelSerializer):
     )
 
     producto_descripcion = serializers.CharField(
-        source='medicamento.descripcion',
+        source=MEDICAMENTO_descripcion,
         read_only=True
     )
 
     stock_disponible = serializers.IntegerField(
-        source='medicamento.stock',
+        source=MEDICAMENTO_stock,
         read_only=True
     )
 
@@ -81,7 +81,7 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prescripcion
         fields = [
-            'medicamento',  # FK → Producto
+            'medicamento',
             'producto_nombre',
             'cantidad',
             'stock_disponible',
@@ -120,8 +120,8 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
         if producto and cantidad and producto.stock < cantidad:
             raise serializers.ValidationError({
                 'cantidad': (
-                    f'Stock insuficiente. Solo hay {producto.cantidad_disponible} '
-                    f'unidades disponibles de {producto.nombre}'
+                    f'Stock insuficiente. Solo hay {producto.stock} '
+                    f'unidades disponibles de {producto.descripcion}'
                 )
             })
 

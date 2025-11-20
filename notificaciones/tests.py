@@ -76,7 +76,7 @@ class NotificacionesHandlersTests(TestCase):
 
         # 3. Verificamos los argumentos (qué se le pasó al espía)
         _, kwargs = mock_enviar_notificacion.call_args
-        
+
         self.assertEqual(kwargs['evento'], 'CITA_CREADA')
         self.assertEqual(kwargs['to_email'], 'cliente@test.com')
         self.assertEqual(kwargs['context']['propietario_nombre'], 'Cliente')
