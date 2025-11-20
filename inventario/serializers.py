@@ -16,6 +16,17 @@ class CategoriaSerializer(serializers.ModelSerializer):
 class ProductoSerializer(serializers.ModelSerializer):
     marca = MarcaSerializer(read_only=True)
     categoria = CategoriaSerializer(read_only=True)
+    
+    marca_id = serializers.PrimaryKeyRelatedField(
+        queryset=Marca.objects.all(), 
+        source='marca', 
+        write_only=True
+    )
+    categoria_id = serializers.PrimaryKeyRelatedField(
+        queryset=Categoria.objects.all(), 
+        source='categoria', 
+        write_only=True
+    )
 
     class Meta:
         model = Producto
