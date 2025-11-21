@@ -1,5 +1,6 @@
 # --- Archivos de entorno ---
 .env
+.env.local
 
 # --- Entornos virtuales ---
 venv/
@@ -12,6 +13,7 @@ __pycache__/
 *.pyd
 *.py[cod]
 *$py.class
+*.so
 
 # --- Archivos temporales ---
 *.log
@@ -21,6 +23,7 @@ __pycache__/
 .idea/
 .vscode/
 *.swp
+*.swo
 
 # --- Archivos del sistema ---
 .DS_Store
@@ -37,8 +40,4 @@ clinica_veterinaria/urls.py
 # --- Archivos de base de datos locales ---
 db.sqlite3
 
-"__pycache__/"
-"*.py[cod]" 
-"*.pyc" 
-".idea/" 
 
