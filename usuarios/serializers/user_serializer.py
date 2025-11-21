@@ -1,5 +1,15 @@
 from rest_framework import serializers
-from usuarios.models import Veterinario, Practicante, Cliente
+from usuarios.models import Veterinario, Practicante, Cliente, Usuario, Rol
+
+# Jerónimo Rodríguez - 06/11/2025
+# Serializers para el modelo Rol
+class RolSerializer(serializers.ModelSerializer):
+    """Serializer para el modelo Rol."""
+    
+    class Meta:
+        model = Rol
+        fields = ['id', 'nombre', 'descripcion']
+        read_only_fields = ['id']
 
 # Jerónimo Rodríguez - 30/10/2025
 # Serializers de perfiles específicos del sistema

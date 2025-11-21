@@ -1,0 +1,44 @@
+# --- Archivos de entorno ---
+.env
+
+# --- Entornos virtuales ---
+venv/
+env/
+
+# --- Archivos de compilación de Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+*$py.class
+
+# --- Archivos temporales ---
+*.log
+*.pot
+
+# --- Archivos de configuración de IDEs ---
+.idea/
+.vscode/
+*.swp
+
+# --- Archivos del sistema ---
+.DS_Store
+Thumbs.db
+
+# --- Archivos específicos del proyecto que NO deben subirse ---
+clinica_veterinaria/settings.py
+clinica_veterinaria/urls.py
+
+# --- Archivos de migraciones ---
+*/migrations/*
+!*/migrations/__init__.py
+
+# --- Archivos de base de datos locales ---
+db.sqlite3
+
+"__pycache__/"
+"*.py[cod]" 
+"*.pyc" 
+".idea/" 
+

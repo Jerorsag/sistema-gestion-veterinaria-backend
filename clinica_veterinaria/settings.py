@@ -39,14 +39,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_filters',
 
     # Django REST Framework
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular',
+
     
     # local apps
     'usuarios',
+    'mascotas',
+    'consultas',
+    'inventario',
+    'citas',
+    'notificaciones',
 ]
 
 # Custom User Model
@@ -144,16 +152,19 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# EMAIL CONFIG
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# --- CONFIGURACIÓN DE ENVÍO DE CORREO (SMTP) ---
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 50,
 }
 
 SIMPLE_JWT = {
@@ -164,3 +175,36 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),               
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
 }
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'API Clínica Veterinaria',
+    'DESCRIPTION': 'Documentación modular agrupada automáticamente por prefijo.',
+    'VERSION': '1.0.0',
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': True,
+
+    # Agrupación automática por prefijo de ruta
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+
+    # Esta clave permite agrupar según el prefijo de las rutas:
+    'SCHEMA_PATH_PREFIX_TRIM': False,
+    'SCHEMA_PATH_PREFIX': '/api/v1',
+    'TAGS_SORTER': 'alpha',
+}
+
+# --- CONFIGURACIÓN DE ENVÍO DE CORREO (SMTP) ---
+# La dirección del "buzón" de Gmail
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+# El puerto de comunicación (587 es el estándar para TLS)
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+# Le decimos que la conexión debe ser encriptada (Segura)
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True' # Convertimos string a Boolean
+
+
+# Leemos el usuario y la contraseña desde nuestro archivo .env
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+# El nombre que verá el cliente cuando reciba el correo
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+

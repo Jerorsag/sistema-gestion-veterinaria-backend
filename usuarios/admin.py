@@ -33,6 +33,7 @@ class ClienteAdmin(admin.ModelAdmin):
 @admin.register(Veterinario)
 class VeterinarioAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'licencia', 'especialidad')
+    search_fields = ['nombre', 'apellido', 'email']
 
 @admin.register(Practicante)
 class PracticanteAdmin(admin.ModelAdmin):
