@@ -4,8 +4,8 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from citas.models import Cita, Servicio
 from mascotas.models import Mascota
 from usuarios.models import Usuario
-from citas.patterns.state import EstadoCita
-from citas.patterns.composite import obtener_cupos_disponibles, AgendaDiaria
+from citas.patterns.state.base import EstadoCita 
+from citas.patterns.composite import AgendaDiaria, BloqueTurno 
 from citas.signals import cita_agendada_signal
 
 from .interface import ICommand
@@ -38,9 +38,34 @@ class AgendarCitaCommand(ICommand):
         if fecha_hora < timezone.now():
             raise ValidationError("No se pueden agendar citas en el pasado.")
 
-        horarios_libres = obtener_cupos_disponibles(veterinario.id, fecha_hora.date())
+        # --- LÓGICA DE DISPONIBILIDAD (Composite) ---
+        # Replicamos la lógica del servicio para validar, o llamamos al servicio.
+        # Para evitar dependencias circulares (Service -> Command -> Service),
+        # usaremos el patrón Composite directamente aquí.
+        
+        # a. Obtener citas ocupadas
+        citas_ocupadas = Cita.objects.filter(
+            veterinario_id=veterinario.id,
+            fecha_hora__date=fecha_hora.date()
+        ).exclude(
+            estado=EstadoCita.CANCELADA
+        ).values_list('fecha_hora', flat=True)
+        
+        horarios_ocupados_set = {
+            c.astimezone(timezone.get_current_timezone()).time() 
+            for c in citas_ocupadas
+        }
+
+        # b. Usar Composite
+        from datetime import time
+        agenda = AgendaDiaria()
+        agenda.agregar(BloqueTurno(time(8, 0), time(12, 0)))
+        agenda.agregar(BloqueTurno(time(14, 0), time(18, 0)))
+        
+        horarios_libres = agenda.obtener_cupos_libres(fecha_hora.date(), horarios_ocupados_set)
+
         if fecha_hora.strftime("%H:%M") not in horarios_libres:
-            raise ValidationError("El veterinario no está disponible a esta hora.")
+            raise ValidationError(f"El veterinario no está disponible a las {fecha_hora.strftime('%H:%M')}.")
 
         # 3. Ejecución
         cita = Cita.objects.create(

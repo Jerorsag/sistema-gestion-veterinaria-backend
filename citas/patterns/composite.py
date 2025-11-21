@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, time
-from citas.services.disponibilidad_service import DisponibilidadService
-_disponibilidad_service = DisponibilidadService()
 
 class ComponenteTemporal(ABC):
     """
