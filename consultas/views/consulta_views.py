@@ -8,15 +8,22 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import ValidationError
-
 from consultas.models import Consulta
+from consultas.signals import consulta_consentimiento_signal
 from consultas.serializers.consulta_serializers import (
     ConsultaSerializer,
     ConsultaListSerializer,
     ConsultaDetailSerializer,
     ConsultaCreateSerializer
 )
-
+from consultas.services.consulta_service import (
+    crear_consulta,
+    obtener_datos_personales
+)
+from consultas.services.consentimiento_service import enviar_consentimiento
+from consultas.services.consulta_estadisticas_service import (
+    estadisticas_consultas
+)
 
 class ConsultaViewSet(viewsets.ModelViewSet):
     """
@@ -76,6 +83,13 @@ class ConsultaViewSet(viewsets.ModelViewSet):
         else:
             raise ValidationError({"detail": "El usuario autenticado no tiene un perfil de veterinario asociado."})
 
+    @action(detail=True, methods=['post'], url_path='enviar-consentimiento')
+    def enviar_consentimiento_view(self, request, pk=None):
+        consulta = self.get_object()
+
+        enviar_consentimiento(consulta)
+        return Response({"detail": "Solicitud enviada correctamente"}, status=200)
+
     @action(detail=False, methods=['get'], url_path='mascota/(?P<mascota_id>[^/.]+)')
     def por_mascota(self, request, mascota_id=None):
         """
@@ -107,34 +121,11 @@ class ConsultaViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def datos_personales(self, request, pk=None):
-        """
-        Retorna los datos personales de la mascota de esta consulta.
-        """
         consulta = self.get_object()
-        datos = consulta.get_datos_personales()
+        datos = obtener_datos_personales(consulta)
         return Response(datos)
 
     @action(detail=False, methods=['get'])
     def estadisticas(self, request):
-        """
-        Retorna estadísticas generales de consultas.
-        """
-        from django.db.models import Count
-        from django.db.models.functions import TruncMonth
-
-        queryset = self.get_queryset()
-
-        # Total de consultas
-        total = queryset.count()
-
-        # Consultas por mes
-        por_mes = queryset.annotate(
-            mes=TruncMonth('fecha_consulta')
-        ).values('mes').annotate(
-            total=Count('id')
-        ).order_by('-mes')[:6]
-
-        return Response({
-            'total_consultas': total,
-            'consultas_por_mes': list(por_mes)
-        })
+        data = estadisticas_consultas(self.get_queryset())
+        return Response(data)
