@@ -55,6 +55,10 @@ INSTALLED_APPS = [
     'inventario',
     'citas',
     'notificaciones',
+<<<<<<< HEAD
+=======
+    'transacciones'
+>>>>>>> origin/develop
 ]
 
 # Custom User Model
@@ -95,16 +99,27 @@ WSGI_APPLICATION = 'clinica_veterinaria.wsgi.application'
 
 load_dotenv()
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', 5432),
+# Usar SQLite para pruebas (más rápido y no requiere configuración de PostgreSQL)
+# Para pruebas, pytest-django creará automáticamente una base de datos en memoria
+import sys
+if 'test' in sys.argv or 'pytest' in sys.modules or 'PYTEST_CURRENT_TEST' in os.environ:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', 5432),
+        }
+    }
 
 
 # Password validation

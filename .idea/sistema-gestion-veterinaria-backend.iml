@@ -13,7 +13,11 @@
     </facet>
   </component>
   <component name="NewModuleRootManager">
+<<<<<<< HEAD
     <orderEntry type="jdk" jdkName="Python 3.12" jdkType="Python SDK" />
+=======
+    <orderEntry type="jdk" jdkName="Python 3.11" jdkType="Python SDK" />
+>>>>>>> origin/develop
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

@@ -11,8 +11,11 @@ class NotificacionesConfig(AppConfig):
         try:
             # Importamos el handler específico de citas
             import notificaciones.handlers.handler_cita
+<<<<<<< HEAD
             # Importamos el handler específico de consultas
             import notificaciones.handlers.handler_consulta
+=======
+>>>>>>> origin/develop
             
         except ImportError:
             pass

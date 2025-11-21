@@ -1,3 +1,121 @@
+from django.db import migrations, models
+import django.db.models.deletion
+import django.utils.timezone
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='Usuario',
+            fields=[
+                ('id', models.BigAutoField(primary_key=True, serialize=False)),
+                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('deleted_at', models.DateTimeField(blank=True, null=True)),
+                ('nombre', models.CharField(max_length=100)),
+                ('apellido', models.CharField(max_length=100)),
+                ('email', models.EmailField(max_length=254, unique=True)),
+                ('username', models.CharField(max_length=150, unique=True)),
+                ('password', models.CharField(max_length=255)),
+                ('estado', models.CharField(default='activo', max_length=20)),
+                ('is_staff', models.BooleanField(default=False)),
+                ('is_active', models.BooleanField(default=True)),
+                ('intentos_fallidos', models.IntegerField(default=0)),
+                ('bloqueado_hasta', models.DateTimeField(blank=True, null=True)),
+            ],
+            options={'db_table': 'usuarios'},
+        ),
+
+        migrations.CreateModel(
+            name='UsuarioPendiente',
+            fields=[
+                ('id', models.BigAutoField(primary_key=True, serialize=False)),
+                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('deleted_at', models.DateTimeField(blank=True, null=True)),
+                ('email', models.EmailField(max_length=254, unique=True)),
+                ('password', models.CharField(max_length=255)),
+                ('verification_code', models.CharField(max_length=255)),
+            ],
+            options={'db_table': 'usuarios_pendientes'},
+        ),
+
+        migrations.CreateModel(
+            name='Rol',
+            fields=[
+                ('id', models.BigAutoField(primary_key=True, serialize=False)),
+                ('nombre', models.CharField(max_length=50, unique=True)),
+                ('descripcion', models.TextField(blank=True)),
+            ],
+            options={'db_table': 'roles'},
+        ),
+
+        migrations.CreateModel(
+            name='UsuarioRol',
+            fields=[
+                ('id', models.BigAutoField(primary_key=True, serialize=False)),
+                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('deleted_at', models.DateTimeField(blank=True, null=True)),
+                ('usuario', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='usuario_roles', to='usuarios.usuario')),
+                ('rol', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rol_usuarios', to='usuarios.rol')),
+            ],
+            options={'db_table': 'usuario_roles'},
+        ),
+
+        migrations.CreateModel(
+            name='Veterinario',
+            fields=[
+                ('usuario', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='perfil_veterinario', to='usuarios.usuario')),
+                ('licencia', models.CharField(max_length=50, unique=True)),
+                ('especialidad', models.CharField(max_length=100, blank=True)),
+                ('horario', models.TextField(blank=True)),
+            ],
+            options={'db_table': 'veterinarios'},
+        ),
+
+        migrations.CreateModel(
+            name='Practicante',
+            fields=[
+                ('usuario', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='perfil_practicante', to='usuarios.usuario')),
+                ('tutor_veterinario', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='practicantes', to='usuarios.veterinario')),
+                ('universidad', models.CharField(max_length=200, blank=True)),
+                ('periodo_practica', models.CharField(max_length=100, blank=True)),
+            ],
+            options={'db_table': 'practicantes'},
+        ),
+
+        migrations.CreateModel(
+            name='Cliente',
+            fields=[
+                ('usuario', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='perfil_cliente', to='usuarios.usuario')),
+                ('telefono', models.CharField(max_length=20, blank=True)),
+                ('direccion', models.TextField(blank=True)),
+            ],
+            options={'db_table': 'clientes'},
+        ),
+
+        migrations.CreateModel(
+            name='ResetPasswordToken',
+            fields=[
+                ('id', models.BigAutoField(primary_key=True, serialize=False)),
+                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('deleted_at', models.DateTimeField(blank=True, null=True)),
+                ('token', models.CharField(max_length=255, unique=True)),
+                ('expires_at', models.DateTimeField()),
+                ('usado', models.BooleanField(default=False)),
+                ('usuario', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reset_tokens', to='usuarios.usuario')),
+            ],
+            options={'db_table': 'reset_password_tokens'},
+        ),
+    ]
 # Generated by Django 4.2.7 on 2025-11-04 02:33
 
 from django.conf import settings

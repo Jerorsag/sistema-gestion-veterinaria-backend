@@ -2,7 +2,11 @@
 # al resto de la aplicación (especialmente a views.py)
 
 from citas.patterns.composite import obtener_horarios_disponibles
+<<<<<<< HEAD
 from  citas.patterns.command import agendar_nueva_cita, cancelar_cita, reagendar_cita
+=======
+from citas.patterns.command import agendar_nueva_cita, cancelar_cita, reagendar_cita
+>>>>>>> origin/develop
 
 # Nota cómo NO exponemos "notificar_observadores".
 # Esa función es un detalle interno de la capa de servicios.

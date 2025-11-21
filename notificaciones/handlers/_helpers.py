@@ -3,9 +3,12 @@
 from citas.models import Cita
 from consultas.models import Consulta # Importamos el modelo de Consulta
 from usuarios.models import Usuario, Cliente
+<<<<<<< HEAD
 from django.conf import settings
 
 FRONTEND_URL = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+=======
+>>>>>>> origin/develop
 
 """
 Responsabilidad Única: Convertir instancias de modelo (Cita, Consulta)
@@ -42,6 +45,7 @@ def preparar_contexto_cita(cita: Cita) -> dict:
 def preparar_contexto_consulta(consulta: Consulta) -> dict:
     """Extrae datos de una Consulta para el contexto de notificación."""
     try:
+<<<<<<< HEAD
         consulta_con_datos = Consulta.objects.select_related(
             'mascota__cliente__usuario', 'veterinario__usuario'  # Asegúrate de llegar al usuario del vet
         ).get(id=consulta.id)
@@ -53,10 +57,20 @@ def preparar_contexto_consulta(consulta: Consulta) -> dict:
         # Esta es la URL que el cliente final (frontend) recibirá
         confirmation_url = f"{FRONTEND_URL}/confirmar-consentimiento/?token={token}"
 
+=======
+        # Optimizamos la consulta para los datos de una consulta
+        consulta_con_datos = Consulta.objects.select_related(
+            'mascota__cliente__usuario', 'veterinario'
+        ).get(id=consulta.id)
+        
+        usuario_cliente = consulta_con_datos.mascota.cliente.usuario
+
+>>>>>>> origin/develop
         context = {
             # Datos del destinatario
             'propietario_nombre': usuario_cliente.nombre,
             'to_email': usuario_cliente.email,
+<<<<<<< HEAD
 
             # Datos específicos del evento
             'mascota_nombre': consulta_con_datos.mascota.nombre,
@@ -65,6 +79,14 @@ def preparar_contexto_consulta(consulta: Consulta) -> dict:
 
             # La URL de confirmación para el botón
             'confirmation_url': confirmation_url
+=======
+            
+            # Datos específicos del evento
+            'mascota_nombre': consulta_con_datos.mascota.nombre,
+            'fecha_consulta': consulta_con_datos.fecha_consulta.strftime('%d-%b-%Y'),
+            'veterinario_nombre': consulta_con_datos.veterinario.get_full_name(),
+            'diagnostico': consulta_con_datos.diagnostico
+>>>>>>> origin/develop
         }
         return context
     except Exception as e:
