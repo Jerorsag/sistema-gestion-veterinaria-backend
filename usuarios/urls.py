@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
-from usuarios.views.auth_views import (
+from usuarios.views import (
     CustomTokenObtainPairView, 
     RegistroView, 
     logout_view,
@@ -10,8 +10,12 @@ from usuarios.views.auth_views import (
     PerfilView,
     ResetPasswordRequestView,
     ResetPasswordConfirmView,
+    UsuarioViewSet,
+    RolViewSet,
+    RegistroUsuarioAPIView,
+    VerificarCodigoAPIView,
+    ReenviarCodigoAPIView
 )
-from usuarios.views.user_views import UsuarioViewSet, RolViewSet
 
 # Configurar el router para los ViewSets
 router = DefaultRouter()
@@ -26,7 +30,12 @@ urlpatterns = [
     path('auth/verify/', verificar_token_view, name='verify_token'),
 
     # Registro público
-     path('auth/register/', RegistroView.as_view(), name='registro'),
+    path('auth/register/', RegistroView.as_view(), name='registro'),
+
+     # Flujo de registro con verificación en 2 pasos
+    path('auth/registro/', RegistroUsuarioAPIView.as_view(), name='registro'),
+    path('auth/verificar/', VerificarCodigoAPIView.as_view(), name='verificar_codigo'),
+    path('auth/reenviar-codigo/', ReenviarCodigoAPIView.as_view(), name='reenviar_codigo'),
 
      # Perfil del usuario autenticado
     path('perfil/', PerfilView.as_view(), name='perfil'),
