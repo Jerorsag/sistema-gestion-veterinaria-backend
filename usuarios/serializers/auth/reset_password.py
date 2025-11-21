@@ -1,6 +1,9 @@
+"""
+Reset password serializers - Gestión de tokens para restablecimiento de contraseña.
+"""
 from rest_framework import serializers
 from django.utils import timezone
-from usuarios.modelos.reset_token import ResetPasswordToken
+from usuarios.models import ResetPasswordToken
 from django.contrib.auth import get_user_model
 
 
