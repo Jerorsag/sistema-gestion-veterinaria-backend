@@ -8,12 +8,23 @@
   <body style="margin:0; padding:0; background:#f5f6f8; font-family:Arial, sans-serif;">
 
     <!-- CONTENEDOR -->
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f6f8; padding:20px 0;">
+    <table style="background:#f5f6f8; padding:20px 0;">
+      <thead>
+        <tr>
+          <th style="display:none;">Contenedor principal</th>
+        </tr>
+      </thead>
+      <tbody>
       <tr>
-        <td align="center">
+        <td style="text-align:center;">
 
           <!-- CARD -->
-          <table width="600" cellpadding="0" cellspacing="0" style="background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <table style="background:white; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08); max-width:600px; width:100%;">
+            <thead>
+              <tr>
+                <th style="display:none;">Factura Manual Card</th>
+              </tr>
+            </thead>
 
             <!-- BANNER -->
             <tr>
@@ -61,26 +72,23 @@
                   <tr>
                     <td style="padding:5px 0; font-size:15px; color:#333;">
                       <strong>Estado:</strong>
-                      <span style="
-                        display:inline-block;
-                        padding:4px 10px;
-                        border-radius:6px;
-                        color:white;
-                        font-size:13px;
-                        font-weight:bold;
-                        {% if estado == 'PAGADA' %}
-                          background:#4CAF50;
-                        {% elif estado == 'PENDIENTE' %}
-                          background:#FFC107;
-                          color:#333;
-                        {% elif estado == 'ANULADA' %}
-                          background:#F44336;
-                        {% else %}
-                          background:#9E9E9E;
-                        {% endif %}
-                      ">
+                      {% if estado == 'PAGADA' %}
+                      <span style="display:inline-block; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; background:#4CAF50; color:white;">
                           {{estado}}
                       </span>
+                      {% elif estado == 'PENDIENTE' %}
+                      <span style="display:inline-block; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; background:#FFC107; color:#333;">
+                          {{estado}}
+                      </span>
+                      {% elif estado == 'ANULADA' %}
+                      <span style="display:inline-block; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; background:#F44336; color:white;">
+                          {{estado}}
+                      </span>
+                      {% else %}
+                      <span style="display:inline-block; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; background:#9E9E9E; color:white;">
+                          {{estado}}
+                      </span>
+                      {% endif %}
                     </td>
                   </tr>
                 </table>
@@ -143,11 +151,12 @@
             <tr>
               <td style="background:#fafafa; padding:20px 40px; text-align:center; font-size:12px; color:#888;">
                 <p style="margin:0;">© {{anio_actual}} SGV - Clínica Veterinaria. Todos los derechos reservados.</p>
-                <p style="margin-top:5px;">Este correo es informativo, por favor no responda.</p>
-              </td>
-            </tr>
-
-          </table>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </body>
+</html>   </table>
 
         </td>
       </tr>

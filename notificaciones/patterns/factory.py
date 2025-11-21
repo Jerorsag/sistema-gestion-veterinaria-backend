@@ -36,9 +36,9 @@ class NotificationFactory:
             "RESET_PASSWORD": ResetPasswordEmail,
         }
 
-        ConstructorDeNotificacion = estrategias.get(evento)
+        constructor_de_notificacion = estrategias.get(evento)
 
-        if ConstructorDeNotificacion:
-            return ConstructorDeNotificacion(context, to_email)
+        if constructor_de_notificacion:
+            return constructor_de_notificacion(context, to_email)
         else:
             raise ValueError(f"Evento de notificación desconocido: {evento}")

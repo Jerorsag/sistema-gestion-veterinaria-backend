@@ -33,7 +33,7 @@ def preparar_contexto_cita(cita: Cita) -> dict:
         return context
     except Exception as e:
         print(f"Error al preparar contexto de Cita {cita.id}: {e}")
-        return None
+        return {}
 
 
 def preparar_contexto_consulta(consulta: Consulta) -> dict:
@@ -60,4 +60,4 @@ def preparar_contexto_consulta(consulta: Consulta) -> dict:
         return context
     except Exception as e:
         print(f"Error al preparar contexto de Consulta {consulta.id}: {e}")
-        return None
+        return {}
