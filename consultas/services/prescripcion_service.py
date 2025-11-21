@@ -18,8 +18,8 @@ def descontar_inventario(producto, cantidad, detalle="Salida por prescripción")
     producto.stock -= cantidad
     producto.save(update_fields=["stock"])
 
-    from inventario.signals import actualizar_stock
-    post_save.disconnect(actualizar_stock, sender=Kardex)
+    from inventario.signals.kardex_signals import procesar_kardex_al_guardar
+    post_save.disconnect(procesar_kardex_al_guardar, sender=Kardex)
 
     try:
         Kardex.objects.create(
@@ -29,7 +29,7 @@ def descontar_inventario(producto, cantidad, detalle="Salida por prescripción")
             producto=producto,
         )
     finally:
-        post_save.connect(actualizar_stock, sender=Kardex)
+        post_save.connect(procesar_kardex_al_guardar, sender=Kardex)
 
     return producto
 
@@ -41,8 +41,8 @@ def devolver_inventario(prescripcion, detalle="Devolución por eliminación de p
     producto.stock += cantidad
     producto.save(update_fields=["stock"])
 
-    from inventario.signals import actualizar_stock
-    post_save.disconnect(actualizar_stock, sender=Kardex)
+    from inventario.signals import procesar_kardex_al_guardar
+    post_save.disconnect(procesar_kardex_al_guardar, sender=Kardex)
 
     try:
         Kardex.objects.create(
@@ -52,6 +52,6 @@ def devolver_inventario(prescripcion, detalle="Devolución por eliminación de p
             producto=producto,
         )
     finally:
-        post_save.connect(actualizar_stock, sender=Kardex)
+        post_save.connect(procesar_kardex_al_guardar, sender=Kardex)
 
     return producto
