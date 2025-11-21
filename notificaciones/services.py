@@ -1,5 +1,5 @@
 """
-Su única responsabilidad es orquestar el proceso: 
+Su única responsabilidad es orquestar el proceso:
 tomar la solicitud, pasársela a la fábrica y decirle al objeto resultante que se envíe.
 """
 
