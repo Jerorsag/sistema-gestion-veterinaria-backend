@@ -5,7 +5,7 @@ Sara Sanchez
 """
 
 from django.db.models.signals import post_save, pre_delete
-from django.dispatch import receiver
+from django.dispatch import receiver, Signal
 from .models import Consulta, Prescripcion, HistoriaClinica
 from .services.historia_service import gestionar_historia_clinica
 from .services.prescripcion_service import descontar_inventario, devolver_inventario
@@ -13,15 +13,31 @@ from .patterns.memento import GestorMementos
 
 gestor_mementos = GestorMementos()
 
+# --- SEÑALES PERSONALIZADAS (BENGALAS) ---
+
+# Señal para cuando se finaliza la consulta (ej. para enviar resumen)
+consulta_finalizada_signal = Signal()
+
+# Señal para cuando se envía la solicitud de consentimiento
+consulta_consentimiento_signal = Signal()
+
+
 @receiver(post_save, sender=Consulta)
 def crear_o_actualizar_historia(sender, instance, created, **kwargs):
     """
-    Al crear una consulta, crea o actualiza automáticamente la historia clínica.
+    Al crear una consulta, crea/actualiza la historia clínica
+    Y AHORA, notifica al cliente si es creada.
     """
     if created:
         print(f"Nueva consulta creada: {instance.id}")
         gestionar_historia_clinica(instance)
 
+        # Disparamos la señal de "consulta finalizada"
+        try:
+            consulta_finalizada_signal.send(sender=Consulta, consulta=instance)
+            print(f"Señal 'consulta_finalizada' enviada para consulta {instance.id}")
+        except Exception as e:
+            print(f"Error al enviar señal de consulta: {e}")
 
 @receiver(post_save, sender=Prescripcion)
 def actualizar_inventario_post_save(sender, instance, created, **kwargs):

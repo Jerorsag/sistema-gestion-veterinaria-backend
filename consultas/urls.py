@@ -10,6 +10,7 @@ from .views.historia_clinica_views import HistoriaClinicaViewSet
 from .views.prescripcion_views import PrescripcionViewSet
 from .views.examen_views import ExamenViewSet
 from .views.vacuna_views import HistorialVacunaViewSet
+from .views.consentimiento_views import ConfirmarConsentimientoView
 
 
 # Crear el router de Django REST Framework
@@ -38,4 +39,5 @@ app_name = 'consultas'
 urlpatterns = [
     # Incluir todas las rutas generadas automáticamente por el router
     path('', include(router.urls)),
+    path('consultas/confirmar-consentimiento/', ConfirmarConsentimientoView.as_view(), name='confirmar-consentimiento'),
 ]
