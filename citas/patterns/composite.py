@@ -1,57 +1,82 @@
-from datetime import datetime, time, timedelta
-from django.utils import timezone
-from ..models import Cita
-from .state import EstadoCita
+from abc import ABC, abstractmethod
+from datetime import datetime, timedelta, time
+from citas.services.disponibilidad_service import DisponibilidadService
+_disponibilidad_service = DisponibilidadService()
 
-def obtener_horarios_disponibles(veterinario_id: str, fecha: datetime.date) -> list:
+class ComponenteTemporal(ABC):
     """
-    Servicio que calcula los horarios disponibles (Patrón Composite).
-    Cumple con RF-005 (Visualizar Calendario) y CP-021.
+    Componente (Interfaz): Define el comportamiento común para
+    bloques de tiempo y agendas compuestas.
+    """
     
-    RESPONSABILIDAD ÚNICA: Calcular la disponibilidad de un veterinario 
-    en una fecha específica.
+    @abstractmethod
+    def obtener_cupos_libres(self, fecha: datetime.date, horarios_ocupados: set) -> list[str]:
+        """
+        Retorna una lista de horas (strings 'HH:MM') disponibles,
+        excluyendo los horarios que estén en el set 'horarios_ocupados'.
+        """
+        pass
+
+    @abstractmethod
+    def agregar(self, componente: 'ComponenteTemporal'):
+        pass
+
+
+class BloqueTurno(ComponenteTemporal):
+    """
+    Hoja (Leaf): Representa un turno continuo (ej: 08:00 a 12:00).
+    Es la unidad indivisible que genera los slots de tiempo.
     """
 
-    # 1. Definir el horario base (Composite Principal): 8am a 5pm, bloques de 30 min
-    horario_base_dia = []
-    hora_inicio = time(8, 0)
-    hora_fin = time(17, 0) # 5 PM
-    intervalo = timedelta(minutes=30)
+    def __init__(self, hora_inicio: time, hora_fin: time, intervalo_minutos: int = 30):
+        self.hora_inicio = hora_inicio
+        self.hora_fin = hora_fin
+        self.intervalo = timedelta(minutes=intervalo_minutos)
+
+    def agregar(self, componente: ComponenteTemporal):
+        # Una hoja no puede tener hijos
+        raise NotImplementedError("No se pueden agregar componentes a un bloque hoja.")
+
+    def obtener_cupos_libres(self, fecha: datetime.date, horarios_ocupados: set) -> list[str]:
+        cupos = []
+        
+        # Convertimos a datetime completo para poder sumar el timedelta
+        actual = datetime.combine(fecha, self.hora_inicio)
+        fin = datetime.combine(fecha, self.hora_fin)
+        ahora = datetime.now()
+
+        while actual < fin:
+            # Lógica de negocio básica: No mostrar horas pasadas si es hoy
+            if actual > ahora:
+                hora_str = actual.time().strftime("%H:%M") # "08:00"
+                hora_obj = actual.time() # objeto time
+
+                # Verificamos si esta hora específica está ocupada (Composite logic)
+                if hora_obj not in horarios_ocupados:
+                    cupos.append(hora_str)
+            
+            actual += self.intervalo
+            
+        return cupos
 
 
-    # Combinamos la fecha (ej. 2025-11-03) con la hora (ej. 08:00)
+class AgendaDiaria(ComponenteTemporal):
+    """
+    Compuesto (Composite): Representa la agenda de un día.
+    Se compone de múltiples BloqueTurno (ej: Mañana y Tarde).
+    """
 
-    hora_actual = datetime.combine(fecha, hora_inicio)
-    hora_fin_dt = datetime.combine(fecha, hora_fin)
+    def __init__(self):
+        self._componentes = []
 
-    while hora_actual < hora_fin_dt:
-        # Hacemos que la hora sea "consciente" de la zona horaria
-        hora_actual_aware = timezone.make_aware(hora_actual)
+    def agregar(self, componente: ComponenteTemporal):
+        self._componentes.append(componente)
 
-        if fecha == timezone.now().date(): # Si la cita es para hoy
-            if hora_actual_aware > timezone.now(): # Solo mostrar horas que no hayan pasado
-                horario_base_dia.append(hora_actual.time())
-        elif fecha > timezone.now().date(): # Si es un día futuro
-            horario_base_dia.append(hora_actual.time()) # Mostrar todas las horas
-
-        hora_actual += intervalo
-
-    # 2. Obtener los horarios ocupados (Composite a restar)
-    citas_programadas = Cita.objects.filter(
-        veterinario_id=veterinario_id,
-        fecha_hora__date=fecha,
-        estado=EstadoCita.AGENDADA# Solo contamos las AGENDADAS
-    ).values_list('fecha_hora', flat=True)
-
-
-# Convertimos los datetimes completos a solo la hora (ej. 09:30:00)
-    horarios_ocupados = {
-        cita_dt.astimezone(timezone.get_current_timezone()).time() 
-        for cita_dt in citas_programadas
-    }
-
-    # 3. Restar (Composite.Resultado = Base - Ocupados)
-    horarios_libres = [hora for hora in horario_base_dia if hora not in horarios_ocupados]
-
-# Formatear la salida a formato "HH:MM"
-    return [hora.strftime("%H:%M") for hora in horarios_libres]
+    def obtener_cupos_libres(self, fecha: datetime.date, horarios_ocupados: set) -> list[str]:
+        todos_los_cupos = []
+        # Delega la tarea a cada turno (hijo) y concatena los resultados
+        for componente in self._componentes:
+            cupos_turno = componente.obtener_cupos_libres(fecha, horarios_ocupados)
+            todos_los_cupos.extend(cupos_turno)
+        
+        return todos_los_cupos
