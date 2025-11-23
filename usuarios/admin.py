@@ -1,7 +1,14 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Usuario, Rol, UsuarioRol, Cliente, Veterinario, Practicante
-from .modelos.reset_token import ResetPasswordToken
+from .models import (
+    Usuario,
+    Rol,
+    UsuarioRol,
+    Cliente,
+    Veterinario,
+    Practicante,
+    ResetPasswordToken,
+)
 
 @admin.register(Usuario)
 class UsuarioAdmin(BaseUserAdmin):
