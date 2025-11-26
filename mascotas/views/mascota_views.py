@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -54,27 +55,49 @@ class MascotaListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         """
-        Filtra las mascotas según el rol del usuario autenticado.
-        
-        Reglas:
-        - ADMIN, VETERINARIO, RECEPCIONISTA: retornan todas las mascotas.
-        - CLIENTE: retornan solo las mascotas donde mascota.cliente.usuario == request.user.
+        Filtra las mascotas según el rol del usuario autenticado y los filtros solicitados.
         """
         usuario = self.request.user
         rol = _obtener_rol_usuario(usuario)
-        
-        # Roles que pueden ver todas las mascotas
+
         roles_acceso_total = ['administrador', 'veterinario', 'recepcionista']
-        
+
         if rol in roles_acceso_total:
-            # Acceso total a todas las mascotas
-            return Mascota.objects.all()
+            queryset = Mascota.objects.all()
         elif rol == 'cliente':
-            # Solo mascotas del cliente autenticado
-            return Mascota.objects.filter(cliente__usuario=usuario)
+            queryset = Mascota.objects.filter(cliente__usuario=usuario)
         else:
-            # Si no tiene rol o rol desconocido, retorna vacío (seguridad por defecto)
-            return Mascota.objects.none()
+            queryset = Mascota.objects.none()
+
+        search = self.request.query_params.get('search')
+        if search:
+            search = search.strip()
+            if search:
+                queryset = queryset.filter(
+                    Q(nombre__icontains=search) |
+                    Q(cliente__usuario__nombre__icontains=search) |
+                    Q(cliente__usuario__apellido__icontains=search) |
+                    Q(especie__nombre__icontains=search) |
+                    Q(raza__nombre__icontains=search)
+                )
+
+        especie_param = self.request.query_params.get('especie')
+        if especie_param:
+            try:
+                especie_id = int(especie_param)
+            except (TypeError, ValueError):
+                raise ValidationError({'especie': 'Debe ser un ID numérico válido.'})
+            queryset = queryset.filter(especie_id=especie_id)
+
+        raza_param = self.request.query_params.get('raza')
+        if raza_param:
+            try:
+                raza_id = int(raza_param)
+            except (TypeError, ValueError):
+                raise ValidationError({'raza': 'Debe ser un ID numérico válido.'})
+            queryset = queryset.filter(raza_id=raza_id)
+
+        return queryset
 
     def perform_create(self, serializer):
         """Guarda la mascota asociada al cliente."""
@@ -142,7 +165,13 @@ class MascotaRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [MascotaListPermission]
 
     def get_queryset(self):
-        return Mascota.objects.filter(cliente__usuario=self.request.user)
+        usuario = self.request.user
+        rol = _obtener_rol_usuario(usuario)
+        roles_acceso_total = ['administrador', 'veterinario', 'recepcionista']
+
+        if rol in roles_acceso_total:
+            return Mascota.objects.all()
+        return Mascota.objects.filter(cliente__usuario=usuario)
 
     def get_object(self):
         """Obtiene la mascota solicitada y maneja errores de forma amigable.
@@ -172,10 +201,6 @@ class MascotaRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             # Mensaje claro para el cliente indicando que no se encontró la mascota
             # o que no pertenece al usuario autenticado.
             raise NotFound(detail='Mascota no encontrada o no pertenece al usuario autenticado.')
-
-        # Ejecutar los chequeos de permisos estándar (si se hubieran definido)
-        self.check_object_permissions(self.request, mascota)
-        return mascota
 
         # Ejecutar los chequeos de permisos estándar (si se hubieran definido)
         self.check_object_permissions(self.request, mascota)
