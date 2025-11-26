@@ -1,9 +1,14 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from mascotas.models import Mascota
-from mascotas.serializers.mascota_serializer import MascotaSerializer
+from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import NotFound, ValidationError
+from mascotas.models import Mascota, Especie, Raza
+from mascotas.serializers.mascota_serializer import (
+    MascotaSerializer,
+    EspecieSerializer,
+    RazaSerializer,
+)
 from mascotas.permissions import MascotaListPermission
-from rest_framework.exceptions import NotFound
 
 """
 Vistas (API) para el módulo de mascotas.
@@ -92,6 +97,41 @@ class MascotaListCreateView(generics.ListCreateAPIView):
 
         return super().list(request, *args, **kwargs)
 
+
+class EspecieListView(generics.ListAPIView):
+    """
+    Lista todas las especies disponibles para poblar selects en el frontend.
+    """
+
+    queryset = Especie.objects.all()
+    serializer_class = EspecieSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+
+class RazaListView(generics.ListAPIView):
+    """
+    Lista las razas filtradas por especie (parámetro obligatorio `especie`).
+    """
+
+    serializer_class = RazaSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        especie_param = self.request.query_params.get("especie")
+        if especie_param is None:
+            raise ValidationError({"especie": "El parámetro especie es obligatorio."})
+
+        try:
+            especie_id = int(especie_param)
+        except (TypeError, ValueError):
+            raise ValidationError({"especie": "Debe ser un ID numérico válido."})
+
+        queryset = Raza.objects.filter(especie_id=especie_id)
+        if not queryset.exists() and not Especie.objects.filter(id=especie_id).exists():
+            raise NotFound(detail="La especie indicada no existe.")
+        return queryset
 
 
 class MascotaRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
