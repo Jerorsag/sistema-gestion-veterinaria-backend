@@ -26,10 +26,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# --- Archivos específicos del proyecto que NO deben subirse ---
-clinica_veterinaria/settings.py
-clinica_veterinaria/urls.py
-
 # --- Archivos de migraciones ---
 */migrations/*
 !*/migrations/__init__.py
