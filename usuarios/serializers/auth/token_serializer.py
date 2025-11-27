@@ -26,15 +26,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         """
         Valida las credenciales del usuario y genera los tokens JWT usando Chain of Responsibility.
+        Permite autenticación con username o email.
         """
         from usuarios.patterns.chain_of_responsibility import ValidadorCredenciales, ValidadorRol, ValidadorEstado
-        username = attrs.get("username")
+        username_or_email = attrs.get("username")
         password = attrs.get("password")
 
-        # Buscar usuario para controlar intentos fallidos
-        try:
-            user = Usuario.objects.get(username=username)
-        except Usuario.DoesNotExist:
+        # Buscar usuario por username o email
+        user = self._obtener_usuario_por_username_o_email(username_or_email)
+        
+        if not user:
             raise serializers.ValidationError("Usuario o contraseña incorrectos.")
 
         # Verificar si el usuario está temporalmente bloqueado
@@ -57,24 +58,30 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 'Esta cuenta está inactiva. Contacte al administrador.'
             )
 
-        # Construir la cadena de validadores
+        # Construir la cadena de validadores con el usuario ya encontrado
         cadena = ValidadorCredenciales(
             ValidadorRol(
                 ValidadorEstado()
             )
         )
         request = {
-            'usuario': username,
+            'user_obj': user,  # Pasar el usuario ya encontrado
             'password': password,
             'rol': user.usuario_roles.first().rol.nombre if user.usuario_roles.exists() else None,
             'estado': user.estado
         }
+        
+        # Validar credenciales y cadena de responsabilidad
         if not cadena.manejar(request):
-            # Registrar intento fallido si el usuario existe
+            # Registrar intento fallido si la validación falla
             mensaje = user.registrar_intento_fallido()
             raise serializers.ValidationError(mensaje)
 
-        # Intentar autenticación normal
+        # Actualizar attrs con el username real para que super().validate() funcione correctamente
+        # Esto es necesario porque si el usuario ingresó email, attrs['username'] tiene el email
+        attrs['username'] = user.username
+
+        # Intentar autenticación normal (genera los tokens JWT)
         try:
             data = super().validate(attrs)
         except (serializers.ValidationError, AuthenticationFailed):
@@ -94,6 +101,26 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         }
 
         return data
+    
+    def _obtener_usuario_por_username_o_email(self, username_or_email):
+        """
+        Busca un usuario por username o email.
+        
+        Args:
+            username_or_email: Puede ser username o email del usuario
+            
+        Returns:
+            Usuario encontrado o None si no existe
+        """
+        try:
+            # Intentar buscar por username primero
+            return Usuario.objects.get(username=username_or_email)
+        except Usuario.DoesNotExist:
+            try:
+                # Si no se encuentra por username, intentar por email
+                return Usuario.objects.get(email=username_or_email)
+            except Usuario.DoesNotExist:
+                return None
     
     @classmethod
     def get_token(cls, user):
