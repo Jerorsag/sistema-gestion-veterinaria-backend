@@ -232,3 +232,8 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 # El nombre que verá el cliente cuando reciba el correo
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
+# URL del frontend (para enlaces en emails)
+# En desarrollo: http://localhost:5173 (Vite)
+# En producción: https://tu-dominio-frontend.com
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+
