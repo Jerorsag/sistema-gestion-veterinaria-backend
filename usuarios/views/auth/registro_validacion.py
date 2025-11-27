@@ -12,6 +12,8 @@ from usuarios.serializers import (
     CodigoVerificacionSerializer,
     ReenviarCodigoSerializer
 )
+from notificaciones.patterns.factory import NotificationFactory
+from datetime import datetime
 
 
 class RegistroUsuarioAPIView(APIView):
@@ -125,6 +127,23 @@ class VerificarCodigoAPIView(APIView):
                 
                 # 4. Eliminar usuario pendiente (ya fue verificado)
                 usuario_pendiente.delete()
+            
+            # 5. Enviar correo de bienvenida (fuera de la transacción para no bloquear si falla)
+            try:
+                welcome_notification = NotificationFactory.get_notification(
+                    evento="WELCOME_EMAIL",
+                    to_email=usuario.email,
+                    context={
+                        "nombre": usuario.nombre,
+                        "username": usuario.username,
+                        "email": usuario.email,
+                        "anio_actual": datetime.now().year
+                    }
+                )
+                welcome_notification.send()
+            except Exception as e:
+                # Log del error pero no bloquear la respuesta exitosa
+                print(f"Error al enviar correo de bienvenida: {str(e)}")
             
             return Response(
                 {

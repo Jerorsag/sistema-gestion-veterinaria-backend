@@ -4,6 +4,7 @@ from citas.models import Cita
 from consultas.models import Consulta # Importamos el modelo de Consulta
 from usuarios.models import Usuario, Cliente
 from django.conf import settings
+from datetime import datetime
 
 FRONTEND_URL = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
 
@@ -31,7 +32,8 @@ def preparar_contexto_cita(cita: Cita) -> dict:
             'mascota_nombre': cita_con_datos.mascota.nombre,
             'fecha_hora': cita_con_datos.fecha_hora.strftime('%d-%b-%Y %I:%M %p'),
             'veterinario_nombre': cita_con_datos.veterinario.get_full_name(),
-            'servicio_nombre': cita_con_datos.servicio.nombre
+            'servicio_nombre': cita_con_datos.servicio.nombre,
+            'anio_actual': datetime.now().year
         }
         return context
     except Exception as e:
@@ -64,7 +66,8 @@ def preparar_contexto_consulta(consulta: Consulta) -> dict:
             'diagnostico': consulta_con_datos.diagnostico,
 
             # La URL de confirmación para el botón
-            'confirmation_url': confirmation_url
+            'confirmation_url': confirmation_url,
+            'anio_actual': datetime.now().year
         }
         return context
     except Exception as e:

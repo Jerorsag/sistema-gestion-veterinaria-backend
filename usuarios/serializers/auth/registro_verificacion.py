@@ -167,39 +167,68 @@ class CodigoVerificacionSerializer(serializers.Serializer):
 class ReenviarCodigoSerializer(serializers.Serializer):
     """
     Serializer para reenviar código de verificación.
+    
+    Permite reenviar el código incluso si el código anterior expiró (después de 20 minutos).
+    Útil cuando:
+    - El código expiró y el usuario necesita uno nuevo
+    - El usuario no recibió el código original
+    - El usuario quiere un nuevo código por seguridad
     """
     
     email = serializers.EmailField()
     
     def validate_email(self, value):
-        """Valida que exista un registro pendiente para este email."""
+        """
+        Valida que exista un registro pendiente para este email.
+        Permite reenviar incluso si el código anterior expiró.
+        """
         email_lower = value.lower()
         try:
             usuario_pendiente = UsuarioPendiente.objects.get(email=email_lower)
+            
+            # Verificar que el usuario no haya excedido los intentos máximos
+            # Si excedió, debe crear un nuevo registro
+            if usuario_pendiente.max_intentos_excedidos:
+                raise serializers.ValidationError(
+                    'Has excedido el número máximo de intentos de verificación. '
+                    'Por favor, realiza un nuevo registro.'
+                )
+            
+            # Verificar que no exista ya un usuario activo con este email
+            if Usuario.objects.filter(email=email_lower).exists():
+                raise serializers.ValidationError(
+                    'Este correo electrónico ya está registrado y verificado. '
+                    'Si olvidaste tu contraseña, usa la opción de recuperación.'
+                )
+            
         except UsuarioPendiente.DoesNotExist:
             raise serializers.ValidationError(
-                'No existe un registro pendiente para este email.'
+                'No existe un registro pendiente para este email. '
+                'Por favor, realiza el registro primero.'
             )
         return email_lower
     
     def save(self):
         """
         Regenera y reenvía el código de verificación.
+        
+        Esto funciona incluso si el código anterior expiró, permitiendo al usuario
+        solicitar un nuevo código después de los 20 minutos.
         """
         email = self.validated_data['email']
         usuario_pendiente = UsuarioPendiente.objects.get(email=email)
         
-        # Generar nuevo código
+        # Generar nuevo código de verificación
         verification_code = get_random_string(6, allowed_chars='0123456789')
         code_expires_at = timezone.now() + timedelta(minutes=20)
         
-        # Actualizar usuario pendiente
+        # Actualizar usuario pendiente con nuevo código y resetear intentos
         usuario_pendiente.verification_code = verification_code
         usuario_pendiente.code_expires_at = code_expires_at
-        usuario_pendiente.intentos_verificacion = 0  # Resetear intentos
+        usuario_pendiente.intentos_verificacion = 0  # Resetear intentos al generar nuevo código
         usuario_pendiente.save()
         
-        # Reenviar email
+        # Reenviar email con el nuevo código
         try:
             notification_strategy = NotificationFactory.get_notification(
                 evento="VERIFY_ACCOUNT_EMAIL",
