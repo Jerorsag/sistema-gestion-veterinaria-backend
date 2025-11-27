@@ -7,11 +7,13 @@ class EstadoCita(ABC):
     
     # --- Constantes para el Modelo (Persistencia) ---
     AGENDADA = 'AGENDADA'
+    EN_PROGRESO = 'EN_PROGRESO' # Nuevo Estado SSOT
     CANCELADA = 'CANCELADA'
     COMPLETADA = 'COMPLETADA'
 
     CHOICES = [
         (AGENDADA, 'Agendada'),
+        (EN_PROGRESO, 'En Progreso'),
         (CANCELADA, 'Cancelada'),
         (COMPLETADA, 'Completada'),
     ]
@@ -28,4 +30,8 @@ class EstadoCita(ABC):
 
     @abstractmethod
     def completar(self, cita):
+        pass
+
+    @abstractmethod
+    def iniciar(self, cita): # Nuevo método de transición
         pass
