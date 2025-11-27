@@ -14,18 +14,31 @@ class ManejadorLogin:
         return True
 
 class ValidadorCredenciales(ManejadorLogin):
-    """Valida usuario y contraseña usando el backend de autenticación de Django."""
+    """
+    Valida usuario y contraseña.
+    
+    Si el usuario ya está en request['user_obj'], valida la contraseña directamente.
+    Si no, intenta autenticar usando el backend de Django (fallback).
+    """
     def manejar(self, request):
-        from django.contrib.auth import authenticate
-
-        username = request.get('usuario')
         password = request.get('password')
-
-        user = authenticate(username=username, password=password)
+        user = request.get('user_obj')
+        
+        # Si el usuario ya fue encontrado (por username o email), validar contraseña directamente
         if user:
-            # Attach authenticated user to the request dict for downstream handlers
-            request['user_obj'] = user
-            return super().manejar(request)
+            if user.check_password(password):
+                return super().manejar(request)
+            return False
+        
+        # Fallback: usar authenticate si no se pasó el usuario (compatibilidad)
+        from django.contrib.auth import authenticate
+        username = request.get('usuario')
+        if username:
+            user = authenticate(username=username, password=password)
+            if user:
+                request['user_obj'] = user
+                return super().manejar(request)
+        
         return False
 
 class ValidadorRol(ManejadorLogin):
