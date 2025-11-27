@@ -12,6 +12,7 @@ from consultas.models import (
     Examen,
     HistorialVacuna
 )
+from citas.patterns.state.state_factory import EstadoCitaFactory
 
 
 @transaction.atomic
@@ -28,6 +29,19 @@ def crear_consulta_completa(validated_data):
 
     # Crear consulta principal
     consulta = Consulta.objects.create(**validated_data)
+
+    if consulta.cita:
+        try:
+            # Obtenemos el manejador del estado actual de la cita (Ej: EstadoAgendada)
+            estado_handler = EstadoCitaFactory.get_state(consulta.cita.estado)
+
+            # Ejecutamos la transición a 'COMPLETADA'
+            estado_handler.completar(consulta.cita)
+
+        except Exception as e:
+            # Opcional: Loguear el error, pero no interrumpir la creación de la consulta
+            # o lanzar un error si es estricto que la cita cambie de estado.
+            print(f"Advertencia: No se pudo completar la cita {consulta.cita.id}: {e}")
 
     # Crear prescripciones
     for p_data in prescripciones_data:
@@ -62,7 +76,7 @@ def crear_consulta(data, veterinario):
     )
 
     # ▶ Aquí llamas a servicios externos:
-    from consultas.services.historia_clinica_services import gestionar_historia_clinica
+    from .historia_service import gestionar_historia_clinica
     gestionar_historia_clinica(consulta)
 
     return consulta

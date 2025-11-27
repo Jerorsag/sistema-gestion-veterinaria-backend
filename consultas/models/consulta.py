@@ -8,6 +8,25 @@ class Consulta(models.Model):
     """
     Consulta veterinaria completa, con los datos de la mascota y el veterinario.
     """
+
+    cita = models.OneToOneField(
+        'citas.Cita',  # Referencia a la Cita origen
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='consulta_generada',
+        verbose_name=_("Cita de origen")
+    )
+
+    servicio = models.ForeignKey(
+        'citas.Servicio',  # Referencia por string al modelo Servicio
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='consultas',
+        verbose_name=_("Servicio realizado")
+    )
+
     mascota = models.ForeignKey(
         'mascotas.Mascota',
         on_delete=models.CASCADE,

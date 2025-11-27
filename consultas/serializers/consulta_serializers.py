@@ -106,6 +106,8 @@ class ConsultaCreateSerializer(serializers.ModelSerializer):
             'prescripciones',
             'examenes',
             'vacunas',
+            'servicio',
+            'cita'
         ]
 
     # VALIDACIONES BÁSICAS
