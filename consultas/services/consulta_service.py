@@ -5,14 +5,14 @@ Sara Sanchez
 """
 
 from django.db import transaction
-
+from citas.patterns.state.state_factory import EstadoCitaFactory
 from consultas.models import (
     Consulta,
     Prescripcion,
     Examen,
     HistorialVacuna
 )
-from citas.patterns.state.state_factory import EstadoCitaFactory
+
 
 
 @transaction.atomic

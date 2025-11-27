@@ -34,6 +34,7 @@ class Consulta(models.Model):
         verbose_name=_("Mascota"),
     )
 
+
     veterinario = models.ForeignKey(
         Veterinario,
         on_delete=models.SET_NULL,

@@ -97,6 +97,8 @@ class ConsultaCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Consulta
         fields = [
+            'servicio',
+            'cita',
             'mascota',
             'veterinario',
             'fecha_consulta',
@@ -106,8 +108,6 @@ class ConsultaCreateSerializer(serializers.ModelSerializer):
             'prescripciones',
             'examenes',
             'vacunas',
-            'servicio',
-            'cita'
         ]
 
     # VALIDACIONES BÁSICAS
