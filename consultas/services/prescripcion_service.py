@@ -41,7 +41,7 @@ def devolver_inventario(prescripcion, detalle="Devolución por eliminación de p
     producto.stock += cantidad
     producto.save(update_fields=["stock"])
 
-    from inventario.signals import procesar_kardex_al_guardar
+    from inventario.signals.kardex_signals import procesar_kardex_al_guardar
     post_save.disconnect(procesar_kardex_al_guardar, sender=Kardex)
 
     try:

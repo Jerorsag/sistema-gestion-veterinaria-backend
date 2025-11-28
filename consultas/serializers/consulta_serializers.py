@@ -166,7 +166,14 @@ class ConsultaUpdateSerializer(ConsultaCreateSerializer):
         model = Consulta
         # Aseguramos que se usen los mismos campos que en la creación
         fields = ConsultaCreateSerializer.Meta.fields
+        from consultas.models import Prescripcion, Examen, HistorialVacuna as Vacuna
 
     def update(self, instance, validated_data):
         from consultas.services.consulta_service import actualizar_consulta_completa
-        return actualizar_consulta_completa(instance, validated_data)
+        try:
+            return actualizar_consulta_completa(instance, validated_data)
+        except Exception as e:
+            print(f"❌ ERROR EN UPDATE: {e}")
+            import traceback
+            traceback.print_exc()
+            raise serializers.ValidationError({"detail": str(e)})
