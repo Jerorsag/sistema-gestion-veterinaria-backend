@@ -70,4 +70,4 @@ class HistorialVacuna(models.Model):
                 })
 
         if self.estado in ['AL_DIA', 'NINGUNA']:
-            self.vacunas_descripcion = None
+            self.vacunas_descripcion = ""
