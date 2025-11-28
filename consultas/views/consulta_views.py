@@ -126,3 +126,36 @@ class ConsultaViewSet(viewsets.ModelViewSet):
     def estadisticas(self, request):
         data = estadisticas_consultas(self.get_queryset())
         return Response(data)
+
+    @action(detail=False, methods=['get'], url_path='disponibles-para-facturar')
+    def disponibles_para_facturar(self, request):
+        """
+        GET /api/v1/consultas/disponibles-para-facturar/
+        
+        Retorna solo las consultas que NO tienen factura asociada (o solo tienen facturas anuladas).
+        Útil para mostrar opciones al crear facturas desde consultas.
+        """
+        from transacciones.models.factura import Factura
+        
+        # Obtener queryset base con filtros de rol
+        queryset = self.get_queryset()
+        
+        # Obtener IDs de consultas que ya tienen factura (excluyendo anuladas)
+        consultas_con_factura = Factura.objects.filter(
+            consulta__isnull=False
+        ).exclude(
+            estado='ANULADA'
+        ).values_list('consulta_id', flat=True)
+        
+        # Filtrar consultas que NO tienen factura asociada
+        queryset = queryset.exclude(id__in=consultas_con_factura)
+        
+        # Ordenar por fecha más reciente
+        queryset = queryset.order_by('-fecha_consulta')
+        
+        # Serializar y retornar
+        serializer = ConsultaListSerializer(queryset, many=True, context={'request': request})
+        return Response({
+            "count": queryset.count(),
+            "results": serializer.data
+        }, status=status.HTTP_200_OK)
