@@ -125,6 +125,42 @@ class CitaViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=400)
 
+    @action(detail=False, methods=['get'], url_path='disponibles-para-facturar')
+    def disponibles_para_facturar(self, request):
+        """
+        GET /api/v1/citas/disponibles-para-facturar/
+        
+        Retorna solo las citas que NO tienen factura asociada (o solo tienen facturas anuladas).
+        Útil para mostrar opciones al crear facturas desde citas.
+        """
+        from transacciones.models.factura import Factura
+        
+        # Obtener queryset base con filtros de rol
+        queryset = self.get_queryset()
+        
+        # Obtener IDs de citas que ya tienen factura (excluyendo anuladas)
+        citas_con_factura = Factura.objects.filter(
+            cita__isnull=False
+        ).exclude(
+            estado='ANULADA'
+        ).values_list('cita_id', flat=True)
+        
+        # Filtrar citas que NO tienen factura asociada
+        queryset = queryset.exclude(id__in=citas_con_factura)
+        
+        # Filtrar solo citas que tienen servicio (necesario para crear factura)
+        queryset = queryset.filter(servicio__isnull=False)
+        
+        # Ordenar por fecha más reciente
+        queryset = queryset.order_by('-fecha_hora')
+        
+        # Serializar y retornar
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            "count": queryset.count(),
+            "results": serializer.data
+        }, status=status.HTTP_200_OK)
+
 
 class ServicioViewSet(viewsets.ModelViewSet):
     """

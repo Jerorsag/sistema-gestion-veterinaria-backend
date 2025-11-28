@@ -5,6 +5,7 @@ from consultas.models import Consulta # Importamos el modelo de Consulta
 from usuarios.models import Usuario, Cliente
 from django.conf import settings
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 FRONTEND_URL = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
 
@@ -23,6 +24,9 @@ def preparar_contexto_cita(cita: Cita) -> dict:
         
         usuario_cliente = cita_con_datos.mascota.cliente.usuario
 
+        # Convertir fecha_hora de UTC a hora local de Colombia antes de formatear
+        fecha_hora_colombia = cita_con_datos.fecha_hora.astimezone(ZoneInfo('America/Bogota'))
+        
         context = {
             # Datos del destinatario
             'propietario_nombre': usuario_cliente.nombre,
@@ -30,7 +34,7 @@ def preparar_contexto_cita(cita: Cita) -> dict:
             
             # Datos específicos del evento
             'mascota_nombre': cita_con_datos.mascota.nombre,
-            'fecha_hora': cita_con_datos.fecha_hora.strftime('%d-%b-%Y %I:%M %p'),
+            'fecha_hora': fecha_hora_colombia.strftime('%d-%b-%Y %I:%M %p'),
             'veterinario_nombre': cita_con_datos.veterinario.get_full_name(),
             'servicio_nombre': cita_con_datos.servicio.nombre,
             'anio_actual': datetime.now().year
