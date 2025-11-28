@@ -31,6 +31,7 @@ class HistorialVacuna(models.Model):
     vacunas_descripcion = models.TextField(
         verbose_name=_("Vacunas pendientes/aplicadas"),
         blank=True,
+        null=True,
         default=""
     )
 
