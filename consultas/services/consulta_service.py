@@ -59,6 +59,9 @@ def crear_consulta_completa(validated_data):
 
     # Crear registro de vacunas
     if vacunas_data:
+        # Asegurar que vacunas_descripcion nunca sea None
+        if vacunas_data.get('vacunas_descripcion') is None:
+            vacunas_data['vacunas_descripcion'] = ""
         HistorialVacuna.objects.create(
             consulta=consulta,
             **vacunas_data

@@ -57,7 +57,7 @@ class HistorialVacunaCreateSerializer(serializers.ModelSerializer):
 
         # Si está "Al día", limpiar descripción
         if estado in ['AL_DIA', 'NINGUNA']:
-            data['vacunas_descripcion'] = None
+            data['vacunas_descripcion'] = ""
 
         return data
 
