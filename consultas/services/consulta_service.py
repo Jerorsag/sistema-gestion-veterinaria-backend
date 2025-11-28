@@ -33,7 +33,7 @@ def crear_consulta_completa(validated_data):
     if consulta.cita:
         try:
             # Obtenemos el manejador del estado actual de la cita (Ej: EstadoAgendada)
-            estado_handler = EstadoCitaFactory.get_state(consulta.cita.estado)
+            estado_handler = EstadoCitaFactory.obtener_estado(consulta.cita.estado)
 
             # Ejecutamos la transición a 'COMPLETADA'
             estado_handler.completar(consulta.cita)

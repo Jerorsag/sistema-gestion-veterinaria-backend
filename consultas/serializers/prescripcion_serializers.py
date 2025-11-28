@@ -90,7 +90,6 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
         fields = [
             'medicamento',
             'producto_nombre',
-            'producto_descripcion',
             'cantidad',
             'stock_disponible',
             'indicaciones',
