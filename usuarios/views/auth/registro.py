@@ -16,7 +16,7 @@ class RegistroView(generics.CreateAPIView):
     serializer_class = RegistroSerializer
     permission_classes = [AllowAny]
     
-    def create(self, request, *args, **kwargs):
+    def create(self, request, *args,     **kwargs):
         """
         Procesa la solicitud de registro:
         1. Valida los datos ingresados mediante el serializer.
