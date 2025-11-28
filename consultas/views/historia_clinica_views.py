@@ -10,7 +10,6 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.db.models import Count
 
-# IMPORTANTE: Usar el modelo de consultas, NO de mascotas
 from consultas.models import HistoriaClinica
 from consultas.serializers.historia_clinica_serializers import (
     HistoriaClinicaSerializer,
@@ -46,18 +45,12 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
             'mascota__especie',
             'mascota__raza'
         ).prefetch_related(
-        'mascota__consultas',
-        'mascota__consultas__prescripciones',
-        'mascota__consultas__prescripciones__medicamento',
-        'mascota__consultas__examenes',
-        'mascota__consultas__vacunas',
-        'mascota__consultas__veterinario',
-        'mascota__consultas__veterinario__usuario'
+            'mascota__consultas'
         )
 
-        # FILTRADO POR ROL
-        if hasattr(user, 'cliente'):
-            cliente = user.cliente
+        # Filtrar por cliente si el usuario tiene perfil de cliente
+        if hasattr(user, 'perfil_cliente'):
+            cliente = user.perfil_cliente
             return queryset.filter(mascota__cliente=cliente)
 
         # Si no tiene perfil_cliente, es VETERINARIO, PRACTICANTE, RECEPCIONISTA o ADMIN
