@@ -9,6 +9,7 @@ from transacciones.views.crear_factura_actions import (
     CrearFacturaDesdeCita,
     CrearFacturaDesdeConsulta
 )
+from transacciones.views.factura_producto_view import CrearFacturaDesdeProductosView
 from transacciones.views.factura_actions import (
     PagarFacturaView,
     AnularFacturaView,
@@ -26,6 +27,7 @@ urlpatterns = [
     # Acciones especiales
     path("facturas/crear-desde-cita/<int:cita_id>/", CrearFacturaDesdeCita.as_view()),
     path("facturas/crear-desde-consulta/<int:consulta_id>/", CrearFacturaDesdeConsulta.as_view()),
+    path("facturas/crear-desde-productos/", CrearFacturaDesdeProductosView.as_view(), name='factura-desde-productos'),
 
     # Envio de factura de forma manual por solicitud
     path("facturas/<int:factura_id>/enviar-email/", EnviarFacturaEmailView.as_view()),

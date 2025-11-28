@@ -50,24 +50,27 @@ class AnularFacturaView(APIView):
     
 
 class EnviarFacturaEmailView(APIView):
+    """
+    Reenvía el correo de una factura existente.
+    Útil cuando ya existe una factura y solo se necesita reenviar el correo.
+    """
     def post(self, request, factura_id):
         try:
-            factura = Factura.objects.get(id=factura_id)
-
-            context = {
-                "cliente_nombre": factura.cliente.get_full_name(),
-                "factura_id": factura.id,
-                "total": factura.total,
-                "fecha": factura.fecha.strftime("%d/%m/%Y %H:%M"),
-                "estado": factura.estado,
-                "detalles": factura.detalles.all()
-            }
-
-            FacturaEnvioManualEmail(context, factura.cliente.email).send()
-
+            factura = FacturaService.reenviar_factura_email(factura_id)
             return Response(
-                {"mensaje": "Factura enviada correctamente."},
+                {
+                    "mensaje": "Factura enviada correctamente.",
+                    "factura_id": factura.id
+                },
                 status=status.HTTP_200_OK
             )
+        except ValidationError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         except Factura.DoesNotExist:
-            return Response({"error": "Factura no encontrada"}, status=404)
+            return Response(
+                {"error": "Factura no encontrada"},
+                status=status.HTTP_404_NOT_FOUND
+            )
