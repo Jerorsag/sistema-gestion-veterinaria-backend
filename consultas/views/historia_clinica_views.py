@@ -46,7 +46,13 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
             'mascota__especie',
             'mascota__raza'
         ).prefetch_related(
-            'mascota__consultas'
+        'mascota__consultas',
+        'mascota__consultas__prescripciones',
+        'mascota__consultas__prescripciones__medicamento',
+        'mascota__consultas__examenes',
+        'mascota__consultas__vacunas',
+        'mascota__consultas__veterinario',
+        'mascota__consultas__veterinario__usuario'
         )
 
         # FILTRADO POR ROL

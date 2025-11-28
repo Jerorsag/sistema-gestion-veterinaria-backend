@@ -14,7 +14,13 @@ class PrescripcionListSerializer(serializers.ModelSerializer):
     """
     Serializer simplificado para listar prescripciones.
     """
-    producto_nombre = serializers.CharField(source='medicamento.nombre',
+    producto_nombre = serializers.CharField(
+        source=MEDICAMENTO_nombre,
+        read_only=True
+    )
+
+    producto_descripcion = serializers.CharField(
+        source=MEDICAMENTO_descripcion,
         read_only=True
     )
 
@@ -24,6 +30,7 @@ class PrescripcionListSerializer(serializers.ModelSerializer):
             'id',
             'medicamento',
             'producto_nombre',
+            'producto_descripcion',
             'cantidad',
             'indicaciones',
         ]
@@ -33,7 +40,7 @@ class PrescripcionSerializer(serializers.ModelSerializer):
     Incluye información detallada del producto (medicamento) completo para lectura de prescripciones.
     """
     producto_nombre = serializers.CharField(
-        source=MEDICAMENTO_descripcion,
+        source=MEDICAMENTO_nombre,
         read_only=True
     )
 
@@ -69,7 +76,7 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
     """
 
     producto_nombre = serializers.CharField(
-        source=MEDICAMENTO_descripcion,
+        source=MEDICAMENTO_nombre,
         read_only=True
     )
 
@@ -83,6 +90,7 @@ class PrescripcionCreateSerializer(serializers.ModelSerializer):
         fields = [
             'medicamento',
             'producto_nombre',
+            'producto_descripcion',
             'cantidad',
             'stock_disponible',
             'indicaciones',
