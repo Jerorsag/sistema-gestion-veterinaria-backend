@@ -14,7 +14,8 @@ from consultas.serializers.consulta_serializers import (
     ConsultaSerializer,
     ConsultaListSerializer,
     ConsultaDetailSerializer,
-    ConsultaCreateSerializer
+    ConsultaCreateSerializer,
+    ConsultaUpdateSerializer
 )
 from consultas.services.consulta_service import (
     crear_consulta,
@@ -56,7 +57,8 @@ class ConsultaViewSet(viewsets.ModelViewSet):
             return ConsultaDetailSerializer
         elif self.action == 'create':
             return ConsultaCreateSerializer
-        return ConsultaSerializer
+        elif self.action in ['update', 'partial_update']:  # <--- Agregar esto
+            return ConsultaUpdateSerializer
 
     def get_queryset(self):
         """

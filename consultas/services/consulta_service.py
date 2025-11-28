@@ -10,8 +10,10 @@ from consultas.models import (
     Consulta,
     Prescripcion,
     Examen,
-    HistorialVacuna
+    HistorialVacuna as Vacuna
 )
+from decimal import Decimal
+from rest_framework.exceptions import ValidationError
 
 
 
@@ -85,8 +87,99 @@ def crear_consulta(data, veterinario):
     return consulta
 
 
+@transaction.atomic
+def actualizar_consulta_completa(instance, validated_data):
+    """
+    Actualiza una consulta completa.
+    IMPORTANTE: Desactivamos temporalmente los signals para manejar el inventario manualmente.
+    """
+    from consultas.models import Prescripcion, Examen, HistorialVacuna as Vacuna
+    from django.db.models.signals import post_save, pre_delete
+    from consultas.signals import actualizar_inventario_post_save, restaurar_stock_al_eliminar_prescripcion
+
+
+    # Actualizar datos básicos
+    instance.mascota = validated_data.get('mascota', instance.mascota)
+    instance.fecha_consulta = validated_data.get('fecha_consulta', instance.fecha_consulta)
+    instance.descripcion_consulta = validated_data.get('descripcion_consulta', instance.descripcion_consulta)
+    instance.diagnostico = validated_data.get('diagnostico', instance.diagnostico)
+    instance.notas_adicionales = validated_data.get('notas_adicionales', instance.notas_adicionales)
+    instance.servicio = validated_data.get('servicio', instance.servicio)
+    instance.cita = validated_data.get('cita', instance.cita)
+    instance.save()
+
+    # DESCONECTAR SIGNALS TEMPORALMENTE
+    post_save.disconnect(actualizar_inventario_post_save, sender=Prescripcion)
+    pre_delete.disconnect(restaurar_stock_al_eliminar_prescripcion, sender=Prescripcion)
+
+    try:
+        # Actualizar prescripciones
+        if 'prescripciones' in validated_data:
+            prescripciones_data = validated_data.pop('prescripciones')
+
+            for old_prescripcion in instance.prescripciones.all():
+                producto = old_prescripcion.medicamento
+                cantidad = Decimal(old_prescripcion.cantidad)
+                producto.stock += cantidad
+                producto.save(update_fields=["stock"])
+                print(f"   ✓ Stock restaurado: {producto.nombre} +{cantidad}")
+
+            instance.prescripciones.all().delete()
+
+            for prescripcion_data in prescripciones_data:
+                medicamento = prescripcion_data['medicamento']
+                cantidad = Decimal(prescripcion_data['cantidad'])
+                indicaciones = prescripcion_data['indicaciones']
+
+                # Validar y descontar stock
+                if medicamento.stock < cantidad:
+                    raise ValidationError({
+                        'prescripciones': f'Stock insuficiente para {medicamento.nombre}. Disponible: {medicamento.stock}, solicitado: {cantidad}'
+                    })
+
+                medicamento.stock -= cantidad
+                medicamento.save(update_fields=["stock"])
+                print(f"   ✓ Stock descontado: {medicamento.nombre} -{cantidad}")
+
+                # Crear prescripción
+                Prescripcion.objects.create(
+                    consulta=instance,
+                    medicamento=medicamento,
+                    cantidad=cantidad,
+                    indicaciones=indicaciones
+                )
+                print(f"   ✓ Prescripción creada")
+
+        # Actualizar exámenes
+        if 'examenes' in validated_data:
+            instance.examenes.all().delete()
+            examenes_data = validated_data.pop('examenes')
+            for examen_data in examenes_data:
+                Examen.objects.create(consulta=instance, **examen_data)
+
+        # Actualizar vacunas
+        if 'vacunas' in validated_data:
+            instance.vacunas.all().delete()
+            vacunas_data = validated_data.pop('vacunas')
+            Vacuna.objects.create(consulta=instance, **vacunas_data)
+        return instance
+
+    finally:
+        # RECONECTAR SIGNALS
+        post_save.connect(actualizar_inventario_post_save, sender=Prescripcion)
+        pre_delete.connect(restaurar_stock_al_eliminar_prescripcion, sender=Prescripcion)
+
+
 def obtener_datos_personales(consulta):
-    """
-    Delegación para datos personales.
-    """
-    return consulta.get_datos_personales()
+    """Obtiene los datos personales del cliente de la mascota"""
+    mascota = consulta.mascota
+    cliente = getattr(mascota, "cliente", None)
+
+    if not cliente:
+        return None
+
+    return {
+        "nombre": f"{cliente.usuario.nombre} {cliente.usuario.apellido}",
+        "telefono": getattr(cliente, "telefono", None),
+        "direccion": getattr(cliente, "direccion", None),
+    }
