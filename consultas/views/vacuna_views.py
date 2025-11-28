@@ -35,8 +35,8 @@ class HistorialVacunaViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
 
         # Si es propietario, solo registros de sus mascotas
-        if hasattr(user, 'mascotas'):
-            return queryset.filter(consulta__mascota__propietario=user)
+        if hasattr(user, 'perfil_cliente'):
+            return queryset.filter(consulta__mascota__cliente=user.perfil_cliente)
 
         return queryset
 

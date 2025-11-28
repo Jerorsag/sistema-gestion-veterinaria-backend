@@ -65,12 +65,10 @@ class ConsultaViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = super().get_queryset()
 
-        # Si es propietario (cliente), solo sus mascotas
-        if hasattr(user, 'mascotas'):
-            return queryset.filter(mascota__propietario=user)
+        if hasattr(user, 'perfil_cliente'):
+            return queryset.filter(mascota__cliente=user.perfil_cliente)
 
-        # Si es veterinario, puede ver todas (o solo las suyas según regla de negocio)
-        # Por ahora permitimos que vea todas
+        # Si es veterinario, administrador o recepcionista, puede ver todas
         return queryset
 
     def perform_create(self, serializer):
@@ -97,11 +95,10 @@ class ConsultaViewSet(viewsets.ModelViewSet):
         """
         consultas = self.get_queryset().filter(mascota_id=mascota_id)
 
-        # Verificar permisos: el propietario solo puede ver sus mascotas
         if consultas.exists():
             primera_consulta = consultas.first()
-            if hasattr(request.user, 'mascotas'):
-                if primera_consulta.mascota.propietario != request.user:
+            if hasattr(request.user, 'perfil_cliente'):
+                if primera_consulta.mascota.cliente != request.user.perfil_cliente:
                     return Response(
                         {'detail': 'No tiene permiso para ver las consultas de esta mascota'},
                         status=status.HTTP_403_FORBIDDEN

@@ -40,8 +40,8 @@ class PrescripcionViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
 
         # Si el usuario es propietario, solo ve prescripciones de sus mascotas
-        if hasattr(user, 'mascotas'):
-            return queryset.filter(consulta__mascota__propietario=user)
+        if hasattr(user, 'perfil_cliente'):
+            return queryset.filter(consulta__mascota__cliente=user.perfil_cliente)
 
         return queryset
 
