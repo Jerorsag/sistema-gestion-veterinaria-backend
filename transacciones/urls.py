@@ -14,6 +14,8 @@ from transacciones.views.factura_actions import (
     AnularFacturaView,
     EnviarFacturaEmailView
 )
+from transacciones.views.reportes_view import ReportesFinancierosView
+from transacciones.views.recibo_view import ReciboFacturaView
 
 urlpatterns = [
 
@@ -31,6 +33,12 @@ urlpatterns = [
     # Acciones de pagos
     path('facturas/<int:factura_id>/pagar/', PagarFacturaView.as_view()),
     path('facturas/<int:factura_id>/anular/', AnularFacturaView.as_view()),
+
+    # Recibos
+    path('facturas/<int:factura_id>/recibo/', ReciboFacturaView.as_view(), name='factura-recibo'),
+
+    # Reportes financieros
+    path('reportes-financieros/', ReportesFinancierosView.as_view(), name='reportes-financieros'),
 
     # Pagos
     path('pagos/', PagoListCreateView.as_view(), name='pago-list-create'),
