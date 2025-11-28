@@ -1,13 +1,17 @@
 from django.db.models import Q
 from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import NotFound, ValidationError
 from mascotas.models import Mascota, Especie, Raza
 from mascotas.serializers.mascota_serializer import (
     MascotaSerializer,
     EspecieSerializer,
     RazaSerializer,
+)
+from mascotas.serializers.especie_raza_serializer import (
+    EspecieCreateSerializer,
+    RazaCreateSerializer,
 )
 from mascotas.permissions import MascotaListPermission
 
@@ -121,28 +125,80 @@ class MascotaListCreateView(generics.ListCreateAPIView):
         return super().list(request, *args, **kwargs)
 
 
-class EspecieListView(generics.ListAPIView):
+class EspecieListCreateView(generics.ListCreateAPIView):
     """
-    Lista todas las especies disponibles para poblar selects en el frontend.
+    Endpoint para listar y crear especies.
+    
+    - GET: Lista todas las especies disponibles (público, sin autenticación).
+    - POST: Crea una nueva especie (requiere autenticación y rol administrativo).
     """
 
     queryset = Especie.objects.all()
-    serializer_class = EspecieSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # GET es público
     pagination_class = None
 
+    def get_serializer_class(self):
+        """Usa serializer de escritura para POST, de lectura para GET."""
+        if self.request.method == 'POST':
+            return EspecieCreateSerializer
+        return EspecieSerializer
 
-class RazaListView(generics.ListAPIView):
+    def get_permissions(self):
+        """Aplica permisos diferentes según el método HTTP."""
+        if self.request.method == 'POST':
+            # POST requiere autenticación y rol administrativo
+            return [IsAuthenticated()]
+        # GET es público
+        return [AllowAny()]
+
+    def perform_create(self, serializer):
+        """Valida permisos antes de crear."""
+        usuario = self.request.user
+        rol = _obtener_rol_usuario(usuario)
+        roles_permitidos = ['administrador', 'veterinario', 'recepcionista']
+
+        if not usuario.is_superuser and rol not in roles_permitidos:
+            raise ValidationError(
+                "Solo administradores, veterinarios y recepcionistas pueden crear especies."
+            )
+        serializer.save()
+
+
+class RazaListCreateView(generics.ListCreateAPIView):
     """
-    Lista las razas filtradas por especie (parámetro obligatorio `especie`).
+    Endpoint para listar y crear razas.
+    
+    - GET: Lista las razas filtradas por especie (parámetro obligatorio `especie`).
+           Público, sin autenticación.
+    - POST: Crea una nueva raza (requiere autenticación y rol administrativo).
     """
 
-    serializer_class = RazaSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # GET es público
     pagination_class = None
+
+    def get_serializer_class(self):
+        """Usa serializer de escritura para POST, de lectura para GET."""
+        if self.request.method == 'POST':
+            return RazaCreateSerializer
+        return RazaSerializer
+
+    def get_permissions(self):
+        """Aplica permisos diferentes según el método HTTP."""
+        if self.request.method == 'POST':
+            # POST requiere autenticación y rol administrativo
+            return [IsAuthenticated()]
+        # GET es público
+        return [AllowAny()]
 
     def get_queryset(self):
+        """Filtra razas por especie para GET."""
         especie_param = self.request.query_params.get("especie")
+        
+        # Para POST, no se requiere el parámetro especie (viene en el body)
+        if self.request.method == 'POST':
+            return Raza.objects.all()
+        
+        # Para GET, el parámetro especie es obligatorio
         if especie_param is None:
             raise ValidationError({"especie": "El parámetro especie es obligatorio."})
 
@@ -155,6 +211,18 @@ class RazaListView(generics.ListAPIView):
         if not queryset.exists() and not Especie.objects.filter(id=especie_id).exists():
             raise NotFound(detail="La especie indicada no existe.")
         return queryset
+
+    def perform_create(self, serializer):
+        """Valida permisos antes de crear."""
+        usuario = self.request.user
+        rol = _obtener_rol_usuario(usuario)
+        roles_permitidos = ['administrador', 'veterinario', 'recepcionista']
+
+        if not usuario.is_superuser and rol not in roles_permitidos:
+            raise ValidationError(
+                "Solo administradores, veterinarios y recepcionistas pueden crear razas."
+            )
+        serializer.save()
 
 
 class MascotaRetrieveUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
