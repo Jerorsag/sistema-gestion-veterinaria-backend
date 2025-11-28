@@ -1,17 +1,18 @@
 from rest_framework import status, viewsets
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Q
 
 from inventario.models import Marca
 from inventario.serializers import MarcaSerializer
+from inventario.permissions import IsAdminOrRecepcionista
 
 
 class MarcaViewSet(viewsets.ModelViewSet):
 
     queryset = Marca.objects.all()
     serializer_class = MarcaSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrRecepcionista]
 
     def create(self, request, *args, **kwargs):
         """
