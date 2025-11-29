@@ -62,7 +62,9 @@ class ReagendarCitaCommand(ICommand):
         
         horarios_libres = agenda.obtener_cupos_libres(nueva_fecha.date(), horarios_ocupados_set)
 
-        if nueva_fecha.strftime("%H:%M") not in horarios_libres:
+        nueva_fecha_local = nueva_fecha.astimezone(timezone.get_current_timezone())
+
+        if nueva_fecha_local.strftime("%H:%M") not in horarios_libres:
             raise ValidationError("El veterinario no está disponible en el nuevo horario solicitado.")
 
         # 3. Delegar al Estado (Patrón State)
