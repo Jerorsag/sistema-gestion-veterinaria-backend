@@ -1,16 +1,17 @@
 from rest_framework import status, viewsets
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Q
 
 from inventario.models import Producto
 from inventario.serializers import ProductoSerializer
+from inventario.permissions import IsAdminOrRecepcionista
 
 
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = Producto.objects.filter(activo=True)
     serializer_class = ProductoSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrRecepcionista]
 
     def get_queryset(self):
         queryset = Producto.objects.filter(activo=True)

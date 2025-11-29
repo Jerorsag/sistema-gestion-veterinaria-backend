@@ -1,5 +1,6 @@
 from datetime import datetime
 from django.db import transaction
+from django.conf import settings
 from transacciones.models.factura import Factura
 from transacciones.models.pago import Pago
 from transacciones.models.detalle_factura import DetalleFactura
@@ -56,6 +57,7 @@ class FacturaService:
 
         factura.recalcular_totales()
 
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
         context = {
             "cliente_nombre": factura.cliente.get_full_name(),
             "factura_id": factura.id,
@@ -63,7 +65,7 @@ class FacturaService:
             "estado": factura.estado,
             "total": factura.total,
             "detalles": factura.detalles.all(),
-            "url_historial": "https://frontend/usuario/facturas",
+            "url_historial": f"{frontend_url}/app/facturacion/{factura.id}",
             "anio_actual": datetime.now().year,
         }
 
@@ -110,6 +112,7 @@ class FacturaService:
 
         factura.recalcular_totales()
 
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
         context = {
             "cliente_nombre": factura.cliente.get_full_name(),
             "factura_id": factura.id,
@@ -117,7 +120,7 @@ class FacturaService:
             "estado": factura.estado,
             "total": factura.total,
             "detalles": factura.detalles.all(),
-            "url_historial": "https://frontend/usuario/facturas",
+            "url_historial": f"{frontend_url}/app/facturacion/{factura.id}",
             "anio_actual": datetime.now().year,
         }
 
@@ -135,6 +138,7 @@ class FacturaService:
         except Factura.DoesNotExist:
             raise ValidationError("La factura no existe.")
 
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
         context = {
             "cliente_nombre": factura.cliente.get_full_name(),
             "factura_id": factura.id,
@@ -142,7 +146,7 @@ class FacturaService:
             "estado": factura.estado,
             "total": factura.total,
             "detalles": factura.detalles.all(),
-            "url_historial": "https://frontend/usuario/facturas",
+            "url_historial": f"{frontend_url}/app/facturacion/{factura.id}",
             "anio_actual": datetime.now().year,
         }
 
@@ -258,6 +262,7 @@ class FacturaService:
             })
 
         # Enviar email de factura de venta directa (template específico)
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
         context = {
             "cliente_nombre": factura.cliente.get_full_name(),
             "factura_id": factura.id,
@@ -267,7 +272,7 @@ class FacturaService:
             "impuestos": float(factura.impuestos),
             "total": float(factura.total),
             "detalles": detalles_para_email,
-            "url_historial": "https://frontend/usuario/facturas",
+            "url_historial": f"{frontend_url}/app/facturacion/{factura.id}",
             "anio_actual": datetime.now().year,
         }
 
@@ -288,6 +293,7 @@ class FacturaService:
         )
 
         if factura.estado == "PAGADA":
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
             context = {
                 "cliente_nombre": factura.cliente.get_full_name(),
                 "factura_id": factura.id,
@@ -295,6 +301,8 @@ class FacturaService:
                 "metodo_pago": pago.metodo.nombre,  
                 "fecha_pago": pago.fecha.strftime("%d/%m/%Y %H:%M"),  
                 "detalles": factura.detalles.all(),
+                "url_historial": f"{frontend_url}/app/facturacion/{factura.id}",
+                "anio_actual": datetime.now().year,
             }
 
             FacturaPagadaEmail(context, factura.cliente.email).send()

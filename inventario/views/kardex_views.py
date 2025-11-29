@@ -1,19 +1,20 @@
 from rest_framework import status, viewsets
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Q
 
 from inventario.models import Kardex
 from inventario.serializers import KardexSerializer
 from inventario.services import KardexService
+from inventario.permissions import IsAdminOrRecepcionista
 
 
 class KardexViewSet(viewsets.ModelViewSet):
 
     serializer_class = KardexSerializer
     queryset = Kardex.objects.all().order_by('-fecha')
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrRecepcionista]
 
     def get_queryset(self):
 
