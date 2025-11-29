@@ -60,18 +60,49 @@ class ConsultaViewSet(viewsets.ModelViewSet):
         elif self.action in ['update', 'partial_update']:  # <--- Agregar esto
             return ConsultaUpdateSerializer
 
+    def _obtener_rol_usuario(self, usuario):
+        """
+        Obtiene el primer rol asociado al usuario.
+        
+        Args:
+            usuario: Instancia de Usuario
+            
+        Returns:
+            str: nombre del rol (ej: 'administrador', 'veterinario', 'recepcionista', 'cliente')
+                 o None si no tiene rol asignado
+        """
+        usuario_rol = usuario.usuario_roles.first()
+        if usuario_rol:
+            return usuario_rol.rol.nombre
+        return None
+
     def get_queryset(self):
         """
         Filtra las consultas según el rol del usuario.
+        
+        - Clientes: solo ven sus propias consultas
+        - Veterinarios, Administradores y Recepcionistas: ven todas las consultas
         """
         user = self.request.user
         queryset = super().get_queryset()
-
-        if hasattr(user, 'perfil_cliente'):
-            return queryset.filter(mascota__cliente=user.perfil_cliente)
-
+        
+        rol = self._obtener_rol_usuario(user)
+        roles_acceso_total = ['administrador', 'veterinario', 'recepcionista']
+        
+        # Si es cliente, solo mostrar sus consultas
+        if rol == 'cliente':
+            # Obtener el perfil_cliente del usuario
+            if hasattr(user, 'perfil_cliente'):
+                return queryset.filter(mascota__cliente__usuario=user)
+            # Si no tiene perfil_cliente pero es cliente, no mostrar nada
+            return queryset.none()
+        
         # Si es veterinario, administrador o recepcionista, puede ver todas
-        return queryset
+        if rol in roles_acceso_total:
+            return queryset
+        
+        # Por defecto, no mostrar nada (seguridad)
+        return queryset.none()
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -95,16 +126,15 @@ class ConsultaViewSet(viewsets.ModelViewSet):
         """
         Retorna todas las consultas de una mascota específica.
         """
+        # Usar get_queryset() que ya aplica los filtros por rol
         consultas = self.get_queryset().filter(mascota_id=mascota_id)
-
-        if consultas.exists():
-            primera_consulta = consultas.first()
-            if hasattr(request.user, 'perfil_cliente'):
-                if primera_consulta.mascota.cliente != request.user.perfil_cliente:
-                    return Response(
-                        {'detail': 'No tiene permiso para ver las consultas de esta mascota'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
+        
+        # Si no hay consultas, puede ser que no tenga permisos o que no existan
+        if not consultas.exists():
+            return Response(
+                {'detail': 'No se encontraron consultas para esta mascota o no tiene permisos para verlas'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         serializer = ConsultaListSerializer(consultas, many=True, context={'request': request})
         return Response(serializer.data)
