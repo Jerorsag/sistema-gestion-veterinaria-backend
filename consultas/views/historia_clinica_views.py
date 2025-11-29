@@ -115,3 +115,17 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
 
         serializer = HistoriaClinicaSerializer(historias.distinct(), many=True, context={'request': request})
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def estadisticas(self, request):
+        """
+        Retorna estadísticas generales de historias clínicas.
+        Útil para el dashboard de veterinarios.
+        """
+        queryset = self.get_queryset()
+        
+        total_historias = queryset.count()
+        
+        return Response({
+            'total_historias_clinicas': total_historias,
+        })

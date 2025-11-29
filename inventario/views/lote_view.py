@@ -6,13 +6,14 @@ Endpoints para usar las estrategias de selección de lotes
 """
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from datetime import date
 
 from inventario.models import Producto
 from inventario.services.lote_service import LoteService
 from inventario.patrones import Lote
+from inventario.permissions import IsAdminOrRecepcionista
 
 
 # Constantes para mensajes de error
@@ -25,7 +26,7 @@ class LoteViewSet(viewsets.ViewSet):
     ViewSet para operaciones con lotes y estrategias de selección.
     Demuestra el uso de Strategy Pattern + Factory Pattern.
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsAdminOrRecepcionista]
 
     @action(detail=False, methods=['get'])
     def estrategias_disponibles(self, request):
