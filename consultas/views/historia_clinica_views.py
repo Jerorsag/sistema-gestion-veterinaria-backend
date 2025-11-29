@@ -32,9 +32,28 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
         'mascota__cliente__usuario__apellido'
     ]
 
+    def _obtener_rol_usuario(self, usuario):
+        """
+        Obtiene el primer rol asociado al usuario.
+        
+        Args:
+            usuario: Instancia de Usuario
+            
+        Returns:
+            str: nombre del rol (ej: 'administrador', 'veterinario', 'recepcionista', 'cliente')
+                 o None si no tiene rol asignado
+        """
+        usuario_rol = usuario.usuario_roles.first()
+        if usuario_rol:
+            return usuario_rol.rol.nombre
+        return None
+
     def get_queryset(self):
         """
         Filtra historias según el rol del usuario.
+        
+        - Clientes: solo ven las historias clínicas de sus propias mascotas
+        - Veterinarios, Administradores y Recepcionistas: ven todas las historias clínicas
         """
         user = self.request.user
 
@@ -48,13 +67,23 @@ class HistoriaClinicaViewSet(viewsets.ReadOnlyModelViewSet):
             'mascota__consultas'
         )
 
-        # Filtrar por cliente si el usuario tiene perfil de cliente
-        if hasattr(user, 'perfil_cliente'):
-            cliente = user.perfil_cliente
-            return queryset.filter(mascota__cliente=cliente)
+        rol = self._obtener_rol_usuario(user)
+        roles_acceso_total = ['administrador', 'veterinario', 'recepcionista']
+        
+        # Si es cliente, solo mostrar historias de sus mascotas
+        if rol == 'cliente':
+            # Obtener el perfil_cliente del usuario
+            if hasattr(user, 'perfil_cliente'):
+                return queryset.filter(mascota__cliente__usuario=user)
+            # Si no tiene perfil_cliente pero es cliente, no mostrar nada
+            return queryset.none()
 
-        # Si no tiene perfil_cliente, es VETERINARIO, PRACTICANTE, RECEPCIONISTA o ADMIN
-        return queryset
+        # Si es veterinario, administrador o recepcionista, puede ver todas
+        if rol in roles_acceso_total:
+            return queryset
+        
+        # Por defecto, no mostrar nada (seguridad)
+        return queryset.none()
 
     def get_serializer_class(self):
         """
