@@ -36,8 +36,10 @@ router.register(r'vacunas', HistorialVacunaViewSet, basename='vacuna')
 app_name = 'consultas'
 
 # Patrones de URL
+# IMPORTANTE: Las rutas personalizadas deben ir ANTES del router para evitar conflictos
 urlpatterns = [
+    # Ruta personalizada para confirmar consentimiento (debe ir antes del router)
+    path('consultas/confirmar-consentimiento/', ConfirmarConsentimientoView.as_view(), name='confirmar-consentimiento'),
     # Incluir todas las rutas generadas automáticamente por el router
     path('', include(router.urls)),
-    path('consultas/confirmar-consentimiento/', ConfirmarConsentimientoView.as_view(), name='confirmar-consentimiento'),
 ]
