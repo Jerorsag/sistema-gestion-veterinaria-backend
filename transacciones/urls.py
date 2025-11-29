@@ -4,7 +4,7 @@ from transacciones.views.factura_view import (
     FacturaDetailView
 )
 from transacciones.views.pago_view import PagoListCreateView
-from transacciones.views.metodo_pago_view import MetodoPagoListView
+from transacciones.views.metodo_pago_view import MetodoPagoListView, MetodoPagoDetailView
 from transacciones.views.crear_factura_actions import (
     CrearFacturaDesdeCita,
     CrearFacturaDesdeConsulta
@@ -47,4 +47,5 @@ urlpatterns = [
 
     # Métodos de pago
     path('metodos-pago/', MetodoPagoListView.as_view(), name='metodo-pago-list'),
+    path('metodos-pago/<int:pk>/', MetodoPagoDetailView.as_view(), name='metodo-pago-detail'),
 ]

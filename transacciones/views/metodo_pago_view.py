@@ -13,3 +13,16 @@ class MetodoPagoListView(generics.ListCreateAPIView):
     """
     queryset = MetodoPago.objects.all()
     serializer_class = MetodoPagoSerializer
+
+
+class MetodoPagoDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Vista para obtener, actualizar y eliminar un método de pago específico.
+    
+    Permite:
+    - GET: Obtener un método de pago por ID
+    - PUT/PATCH: Actualizar un método de pago
+    - DELETE: Eliminar un método de pago
+    """
+    queryset = MetodoPago.objects.all()
+    serializer_class = MetodoPagoSerializer
