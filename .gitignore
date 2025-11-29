@@ -33,3 +33,7 @@ Thumbs.db
 # --- Archivos de base de datos locales ---
 db.sqlite3
 
+# --- Archivos estáticos recopilados de Django ---
+/static/
+/staticfiles/
+/media/
