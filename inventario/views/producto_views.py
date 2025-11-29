@@ -11,7 +11,22 @@ from inventario.permissions import IsAdminOrRecepcionista
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = Producto.objects.filter(activo=True)
     serializer_class = ProductoSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrRecepcionista]
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """
+        Permisos personalizados según la acción:
+        - GET (list, retrieve): Cualquier usuario autenticado (incluye Veterinario)
+        - POST, PUT, PATCH, DELETE: Solo Admin o Recepcionista
+        """
+        if self.action in ['list', 'retrieve']:
+            # Solo necesita estar autenticado para ver productos
+            permission_classes = [IsAuthenticated]
+        else:
+            # Necesita ser Admin o Recepcionista para crear/modificar/eliminar
+            permission_classes = [IsAuthenticated, IsAdminOrRecepcionista]
+
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         queryset = Producto.objects.filter(activo=True)

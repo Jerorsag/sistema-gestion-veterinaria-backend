@@ -9,9 +9,9 @@ from citas.patterns.state.state_factory import EstadoCitaFactory
 from consultas.models import (
     Consulta,
     Prescripcion,
-    Examen,
-    HistorialVacuna as Vacuna
+    Examen
 )
+from consultas.models import HistorialVacuna
 from decimal import Decimal
 from rest_framework.exceptions import ValidationError
 
