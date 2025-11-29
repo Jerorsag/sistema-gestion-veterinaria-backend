@@ -64,7 +64,9 @@ class AgendarCitaCommand(ICommand):
         
         horarios_libres = agenda.obtener_cupos_libres(fecha_hora.date(), horarios_ocupados_set)
 
-        if fecha_hora.strftime("%H:%M") not in horarios_libres:
+        fecha_hora_local = fecha_hora.astimezone(timezone.get_current_timezone())
+
+        if fecha_hora_local.strftime("%H:%M") not in horarios_libres:
             raise ValidationError(f"El veterinario no está disponible a las {fecha_hora.strftime('%H:%M')}.")
 
         # 3. Ejecución
