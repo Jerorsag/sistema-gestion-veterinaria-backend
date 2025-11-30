@@ -13,9 +13,9 @@ workers = int(os.environ.get('WEB_CONCURRENCY', 2))
 worker_class = 'sync'  # Usamos sync porque el threading lo manejamos en Python
 # threads no se usa con worker_class='sync', se ignora automáticamente
 
-# Timeout optimizado para emails críticos (verificación de cuenta)
-# 45 segundos es suficiente para envío síncrono de emails con SendGrid
-timeout = 45
+# Timeout optimizado para evitar 502 Bad Gateway
+# 30 segundos es el máximo recomendado para Render
+timeout = 30
 keepalive = 5
 
 # Logging
