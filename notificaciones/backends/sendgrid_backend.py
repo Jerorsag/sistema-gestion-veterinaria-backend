@@ -86,26 +86,35 @@ class SendGridBackend(BaseEmailBackend):
                 subject = message.subject
                 
                 # Parsear from_email si viene en formato "Nombre <email@example.com>"
-                # SendGrid requiere que el email esté verificado
+                # IMPORTANTE: SendGrid requiere que el email esté verificado
+                # Usamos SOLO el email (sin nombre) para evitar problemas con 401
+                # Esto es exactamente igual a como funciona el endpoint directo que SÍ funciona
                 import re
+                from_email_obj = None
+                
                 if '<' in from_email_raw and '>' in from_email_raw:
                     # Formato: "Nombre <email@example.com>"
                     match = re.match(r'(.+?)\s*<(.+?)>', from_email_raw)
                     if match:
                         from_name = match.group(1).strip()
                         from_email = match.group(2).strip()
-                        # IMPORTANTE: SendGrid requiere que el email esté verificado
-                        # Usamos solo el email (sin nombre) para evitar problemas con 401
+                        # Usar SOLO el email (igual que el endpoint directo)
                         from_email_obj = from_email
-                        logger.info(f"📧 From email parseado: {from_name} <{from_email}> (usando solo email)")
+                        logger.info(f"📧 From email parseado: {from_name} <{from_email}> → usando solo: {from_email}")
                     else:
-                        # Si no se puede parsear, usar solo el email
+                        # Si no se puede parsear, intentar extraer el email de otra forma
                         from_email_obj = from_email_raw
-                        logger.warning(f"⚠️ No se pudo parsear from_email: {from_email_raw}")
+                        logger.warning(f"⚠️ No se pudo parsear from_email: {from_email_raw}, usando tal cual")
                 else:
                     # Solo email
                     from_email_obj = from_email_raw
-                    logger.info(f"📧 From email: {from_email_raw}")
+                    logger.info(f"📧 From email (directo): {from_email_raw}")
+                
+                # Asegurar que from_email_obj sea un string limpio
+                if from_email_obj:
+                    from_email_obj = str(from_email_obj).strip()
+                    # Eliminar cualquier espacio o carácter extra
+                    from_email_obj = from_email_obj.replace('\n', '').replace('\r', '').replace('\t', '')
                 
                 # Obtener el contenido HTML o texto
                 if hasattr(message, 'alternatives') and message.alternatives:

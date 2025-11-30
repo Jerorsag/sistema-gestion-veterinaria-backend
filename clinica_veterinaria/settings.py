@@ -34,8 +34,28 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-2xr^i4jdz)-gd3dlgxae=0!%t#
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # ALLOWED_HOSTS desde variable de entorno (separados por comas)
-ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1')
-ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
+ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS', '')
+ALLOWED_HOSTS = []
+
+if ALLOWED_HOSTS_STR:
+    # Si está configurado en variable de entorno, usarlo
+    ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
+else:
+    # Si no está configurado, usar valores por defecto según el entorno
+    if DEBUG:
+        # Desarrollo local
+        ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+    else:
+        # Producción: incluir dominio de Render por defecto
+        # Django no permite wildcards, así que agregamos el dominio específico
+        ALLOWED_HOSTS = ['sgv-backend.onrender.com']
+
+# Siempre agregar el dominio de Render si estamos en producción
+# Render usa el formato: servicio.onrender.com
+if not DEBUG:
+    # Agregar dominio específico si no está ya incluido
+    if 'sgv-backend.onrender.com' not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append('sgv-backend.onrender.com')
 
 
 # Application definition
@@ -182,6 +202,17 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
+    # Asegurar que siempre devuelva JSON
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
+    # Manejo de excepciones personalizado para siempre devolver JSON
+    'EXCEPTION_HANDLER': 'clinica_veterinaria.exceptions.custom_exception_handler',
 }
 
 # CORS: Obtener desde variable de entorno o usar valores por defecto para desarrollo
@@ -197,7 +228,17 @@ else:
         "http://127.0.0.1:5174",
     ]
 
+# Si estamos en Render y hay un frontend desplegado, agregarlo automáticamente
+if os.getenv('RENDER'):
+    frontend_url = os.getenv('FRONTEND_URL', '')
+    if frontend_url and frontend_url not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(frontend_url)
+    # También agregar el frontend común de Render si existe
+    if 'sgv-frontend.onrender.com' not in str(CORS_ALLOWED_ORIGINS):
+        CORS_ALLOWED_ORIGINS.append('https://sgv-frontend.onrender.com')
+
 # Solo permitir todos los orígenes en desarrollo (cuando DEBUG=True)
+# En producción, usar solo los orígenes permitidos explícitamente
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = list(default_headers) + [

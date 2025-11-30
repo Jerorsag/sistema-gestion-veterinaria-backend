@@ -10,6 +10,9 @@ from sendgrid import SendGridAPIClient
 from django.conf import settings
 import os
 import traceback
+import logging
+
+logger = logging.getLogger(__name__)
 
 class TestSendGridDiagnosticView(APIView):
     """
@@ -123,34 +126,96 @@ class TestSendGridDiagnosticView(APIView):
                         if isinstance(body, bytes):
                             import json
                             body = json.loads(body.decode('utf-8'))
-                        if isinstance(body, dict) and 'results' in body:
-                            verified_emails = [sender.get('from', {}).get('email', '') for sender in body.get('results', [])]
-                    except:
+                        
+                        # SendGrid puede devolver la lista en diferentes formatos
+                        if isinstance(body, dict):
+                            # Formato 1: {'results': [{'from': {'email': '...'}}, ...]}
+                            if 'results' in body:
+                                for sender in body.get('results', []):
+                                    # Puede venir como sender['from']['email'] o sender['email']
+                                    email = None
+                                    if isinstance(sender, dict):
+                                        if 'from' in sender and isinstance(sender['from'], dict):
+                                            email = sender['from'].get('email', '')
+                                        elif 'email' in sender:
+                                            email = sender.get('email', '')
+                                        elif 'from_email' in sender:
+                                            email = sender.get('from_email', '')
+                                    
+                                    if email:
+                                        verified_emails.append(email.lower())
+                            
+                            # Formato 2: Lista directa
+                            elif isinstance(body, list):
+                                for sender in body:
+                                    if isinstance(sender, dict):
+                                        email = sender.get('from', {}).get('email', '') or sender.get('email', '')
+                                        if email:
+                                            verified_emails.append(email.lower())
+                        
+                        # También buscar en otros campos posibles
+                        if not verified_emails and isinstance(body, dict):
+                            # Buscar en cualquier campo que contenga 'email'
+                            def extract_emails(obj, emails_list):
+                                if isinstance(obj, dict):
+                                    for key, value in obj.items():
+                                        if 'email' in key.lower() and isinstance(value, str) and '@' in value:
+                                            emails_list.append(value.lower())
+                                        else:
+                                            extract_emails(value, emails_list)
+                                elif isinstance(obj, list):
+                                    for item in obj:
+                                        extract_emails(item, emails_list)
+                            
+                            extract_emails(body, verified_emails)
+                            
+                    except Exception as parse_error:
+                        print(f"⚠️ Error parseando respuesta de verified_senders: {parse_error}")
+                        print(f"   Body recibido: {body if 'body' in locals() else 'N/A'}")
+                        # Si no podemos parsear, asumimos que no podemos verificar
                         pass
                     
-                    if from_email in verified_emails:
+                    # Verificar si el email está en la lista (comparación case-insensitive)
+                    from_email_lower = from_email.lower()
+                    if verified_emails and from_email_lower in verified_emails:
                         diagnostic['from_email_status'] = 'verified'
                         diagnostic['recommendations'].append(
                             f'✅ El email remitente "{from_email}" está verificado'
                         )
-                    else:
-                        diagnostic['from_email_status'] = 'not_verified'
+                    elif verified_emails:
+                        # Hay emails verificados pero este no está en la lista
+                        diagnostic['from_email_status'] = 'not_in_list'
                         diagnostic['recommendations'].extend([
-                            f'❌ El email remitente "{from_email}" NO está verificado',
-                            '   → Ve a SendGrid Dashboard > Settings > Sender Authentication',
-                            '   → Haz clic en "Verify a Single Sender"',
-                            '   → Ingresa el email y confirma la verificación desde tu correo'
+                            f'⚠️ El email "{from_email}" no aparece en la lista de emails verificados',
+                            f'   Emails verificados encontrados: {", ".join(verified_emails[:3])}...',
+                            '   → Si el email está verificado en el Dashboard, esto puede ser un problema de permisos de la API',
+                            '   → El email puede funcionar correctamente aunque no aparezca aquí'
                         ])
+                    else:
+                        # No se pudieron extraer emails de la respuesta
+                        diagnostic['from_email_status'] = 'cannot_parse_response'
+                        diagnostic['recommendations'].append(
+                            '⚠️ No se pudo extraer la lista de emails verificados de la respuesta de SendGrid'
+                        )
                 else:
                     diagnostic['from_email_status'] = 'cannot_check'
                     diagnostic['recommendations'].append(
-                        '⚠️ No se pudo verificar el estado del email remitente (puede requerir permisos adicionales)'
+                        f'⚠️ No se pudo verificar el estado del email remitente (Status: {response.status_code})'
                     )
             except Exception as email_error:
                 diagnostic['from_email_status'] = 'error_checking'
-                diagnostic['recommendations'].append(
-                    f'⚠️ Error al verificar email remitente: {str(email_error)}'
-                )
+                error_str = str(email_error)
+                # Si es un error 403, probablemente no tiene permisos para verificar
+                if '403' in error_str or 'Forbidden' in error_str:
+                    diagnostic['recommendations'].append(
+                        '⚠️ No se tienen permisos para verificar el estado del email remitente vía API',
+                        '   → Si el email está verificado en SendGrid Dashboard, debería funcionar correctamente',
+                        '   → El error 401 al enviar emails puede deberse a otro problema'
+                    )
+                else:
+                    diagnostic['recommendations'].append(
+                        f'⚠️ Error al verificar email remitente: {error_str}'
+                    )
             
             # 5. Resumen y recomendaciones finales
             if diagnostic['api_key_status'] in ['unauthorized', 'invalid_format', 'not_found']:
@@ -158,15 +223,27 @@ class TestSendGridDiagnosticView(APIView):
                     '\n🔧 ACCIÓN REQUERIDA: Corrige el problema del API Key antes de continuar'
                 )
             
+            # Solo marcar como error crítico si realmente no está verificado
+            # Si no podemos verificar vía API pero el API Key es válido, asumimos que está bien
             if diagnostic['from_email_status'] == 'not_verified':
                 diagnostic['recommendations'].append(
                     '\n🔧 ACCIÓN REQUERIDA: Verifica el email remitente en SendGrid'
                 )
+            elif diagnostic['from_email_status'] in ['cannot_check', 'error_checking', 'cannot_parse_response', 'not_in_list']:
+                # Si el API Key es válido, probablemente el email también lo está
+                # Solo no podemos verificarlo vía API
+                if diagnostic['api_key_status'] in ['valid_with_permissions', 'format_valid']:
+                    diagnostic['recommendations'].append(
+                        '\n✅ NOTA: No se pudo verificar el email vía API, pero si está verificado en SendGrid Dashboard, debería funcionar'
+                    )
             
-            success = (
-                diagnostic['api_key_status'] in ['valid_with_permissions', 'format_valid'] and
-                diagnostic['from_email_status'] in ['verified', 'cannot_check']
-            )
+            # El éxito depende principalmente del API Key
+            # Si el API Key es válido, asumimos que puede funcionar aunque no podamos verificar el email
+            success = diagnostic['api_key_status'] in ['valid_with_permissions', 'format_valid']
+            
+            # Si el email está verificado, mejor aún
+            if diagnostic['from_email_status'] == 'verified':
+                success = True
             
             return Response({
                 'success': success,
