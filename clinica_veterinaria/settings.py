@@ -22,13 +22,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+# Cargar variables de entorno
+load_dotenv()
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2xr^i4jdz)-gd3dlgxae=0!%t#s#d%&!-s36i5kv41&7d8$e4#'
+# Obtener SECRET_KEY desde variable de entorno, con fallback para desarrollo
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-2xr^i4jdz)-gd3dlgxae=0!%t#s#d%&!-s36i5kv41&7d8$e4#')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG debe ser False en producción
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS desde variable de entorno (separados por comas)
+ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
 
 
 # Application definition
@@ -96,8 +103,6 @@ WSGI_APPLICATION = 'clinica_veterinaria.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-load_dotenv()
 
 # Usar SQLite para pruebas (más rápido y no requiere configuración de PostgreSQL)
 # Para pruebas, pytest-django creará automáticamente una base de datos en memoria
@@ -182,13 +187,21 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 50,
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",      # ← Tu frontend está en 5174
-    "http://127.0.0.1:5174",
-]
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS: Obtener desde variable de entorno o usar valores por defecto para desarrollo
+CORS_ALLOWED_ORIGINS_STR = os.getenv('CORS_ALLOWED_ORIGINS', '')
+if CORS_ALLOWED_ORIGINS_STR:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS_STR.split(',') if origin.strip()]
+else:
+    # Valores por defecto para desarrollo local
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ]
+
+# Solo permitir todos los orígenes en desarrollo (cuando DEBUG=True)
+CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "authorization",
