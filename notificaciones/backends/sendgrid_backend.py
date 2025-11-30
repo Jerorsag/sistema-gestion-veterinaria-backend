@@ -70,19 +70,25 @@ class SendGridBackend(BaseEmailBackend):
                 subject = message.subject
                 
                 # Parsear from_email si viene en formato "Nombre <email@example.com>"
+                # SendGrid requiere que el email esté verificado, así que usamos solo el email
+                import re
                 if '<' in from_email_raw and '>' in from_email_raw:
                     # Formato: "Nombre <email@example.com>"
-                    import re
                     match = re.match(r'(.+?)\s*<(.+?)>', from_email_raw)
                     if match:
                         from_name = match.group(1).strip()
                         from_email = match.group(2).strip()
+                        # Usar Email object con nombre y email
                         from_email_obj = Email(from_email, from_name)
+                        logger.info(f"📧 From email parseado: {from_name} <{from_email}>")
                     else:
+                        # Si no se puede parsear, usar solo el email
                         from_email_obj = from_email_raw
+                        logger.warning(f"⚠️ No se pudo parsear from_email: {from_email_raw}")
                 else:
                     # Solo email
                     from_email_obj = from_email_raw
+                    logger.info(f"📧 From email: {from_email_raw}")
                 
                 # Obtener el contenido HTML o texto
                 if hasattr(message, 'alternatives') and message.alternatives:
@@ -95,6 +101,11 @@ class SendGridBackend(BaseEmailBackend):
                     html_content = None
                 
                 # Crear el objeto Mail de SendGrid
+                logger.info(f"📧 Creando Mail object:")
+                logger.info(f"   From: {from_email_obj}")
+                logger.info(f"   To: {to_emails}")
+                logger.info(f"   Subject: {subject}")
+                
                 mail = Mail(
                     from_email=from_email_obj,
                     to_emails=to_emails,
@@ -104,7 +115,9 @@ class SendGridBackend(BaseEmailBackend):
                 )
                 
                 # Enviar el email
+                logger.info(f"📧 Enviando email via SendGrid API...")
                 response = self.client.send(mail)
+                logger.info(f"📧 Respuesta de SendGrid: Status {response.status_code}")
                 
                 # Verificar respuesta
                 if response.status_code in [200, 201, 202]:
