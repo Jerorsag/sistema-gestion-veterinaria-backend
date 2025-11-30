@@ -43,6 +43,14 @@ class BaseNotification(ABC):
         Método privado que envía el correo de forma síncrona.
         """
         try:
+            # Log de configuración para debugging
+            print(f"📧 Configuración SMTP:")
+            print(f"   EMAIL_HOST: {getattr(settings, 'EMAIL_HOST', 'NOT SET')}")
+            print(f"   EMAIL_PORT: {getattr(settings, 'EMAIL_PORT', 'NOT SET')}")
+            print(f"   EMAIL_HOST_USER: {getattr(settings, 'EMAIL_HOST_USER', 'NOT SET')}")
+            print(f"   DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', 'NOT SET')}")
+            print(f"   Enviando a: {self.to_email}")
+            
             send_mail(
                 subject,
                 message_body,
@@ -52,11 +60,14 @@ class BaseNotification(ABC):
                 fail_silently=False,
             )
             self._email_sent = True
-            print(f"✅ Correo '{subject}' enviado a {self.to_email}")
+            print(f"✅ Correo '{subject}' enviado exitosamente a {self.to_email}")
         except Exception as e:
             self._email_error = e
+            import traceback
             error_msg = f"❌ Error enviando '{subject}' a {self.to_email}: {e}"
             print(error_msg)
+            print(f"❌ Traceback completo:")
+            print(traceback.format_exc())
             raise
 
     def send(self, require_success: bool = False):
@@ -81,6 +92,10 @@ class BaseNotification(ABC):
         if require_success:
             print(f"📧 Intentando envío síncrono de correo crítico '{subject}' a {self.to_email}...")
             
+            # Resetear flags antes de intentar
+            self._email_sent = False
+            self._email_error = None
+            
             # Crear thread para el envío
             email_thread = threading.Thread(
                 target=self._send_email_sync,
@@ -97,6 +112,7 @@ class BaseNotification(ABC):
                 # El envío aún está en proceso, pero no esperamos más
                 # El thread continuará en background y el email se enviará
                 print(f"⏳ Envío de correo crítico '{subject}' en proceso (background)...")
+                print(f"⚠️ ADVERTENCIA: El thread aún está corriendo, el email puede enviarse en background")
                 # No lanzamos error, el email se enviará en background
                 return
             elif self._email_sent:
@@ -105,10 +121,12 @@ class BaseNotification(ABC):
                 return
             elif self._email_error:
                 # Hubo un error, lanzarlo
+                print(f"❌ ERROR CRÍTICO: {self._email_error}")
                 raise self._email_error
             else:
                 # Timeout pero no sabemos el estado, asumir que se está enviando
                 print(f"⏳ Envío de correo crítico '{subject}' en proceso (timeout)...")
+                print(f"⚠️ ADVERTENCIA: Timeout alcanzado, el email puede enviarse en background")
                 return
         
         # Para emails no críticos, usar modo asíncrono directo
