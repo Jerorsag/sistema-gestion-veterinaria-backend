@@ -38,7 +38,7 @@ services:
       DEBUG: ${DEBUG:-False}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
       # CORS
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
     ports:
       - "8000:8000"
     volumes:
@@ -53,6 +53,21 @@ services:
     networks:
       - sgv_network
     command: gunicorn clinica_veterinaria.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120 --access-logfile - --error-logfile -
+
+  frontend:
+    image: sgv-frontend-full-frontend
+    container_name: sgv_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    environment:
+      # Variables de entorno del frontend (ajusta según necesites)
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+      # Agrega aquí otras variables de entorno que necesite tu frontend
+    depends_on:
+      - backend
+    networks:
+      - sgv_network
 
   pgadmin:
     image: dpage/pgadmin4
