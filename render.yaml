@@ -3,7 +3,7 @@ services:
     name: sgv-backend
     env: python
     buildCommand: bash build.sh
-    startCommand: gunicorn clinica_veterinaria.wsgi:application --bind 0.0.0.0:$PORT --timeout 45
+    startCommand: gunicorn clinica_veterinaria.wsgi:application --bind 0.0.0.0:$PORT --timeout 30
     envVars:
       # Base de datos (Neon)
       - key: DB_NAME

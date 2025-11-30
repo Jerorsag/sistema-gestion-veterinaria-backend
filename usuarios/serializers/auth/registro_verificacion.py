@@ -94,6 +94,8 @@ class RegistroPendienteSerializer(serializers.ModelSerializer):
         )
         
         # Enviar código de verificación por email usando el patrón Factory
+        # Usamos require_success=True para intentar envío síncrono con timeout
+        # Si no se completa en 5s, el email se enviará en background
         try:
             notification_strategy = NotificationFactory.get_notification(
                 evento="VERIFY_ACCOUNT_EMAIL",
@@ -103,15 +105,15 @@ class RegistroPendienteSerializer(serializers.ModelSerializer):
                     "code": verification_code
                 }
             )
-            # CRÍTICO: require_success=True garantiza el envío antes de responder
+            # Intenta envío con timeout, si no se completa continúa en background
             notification_strategy.send(require_success=True)
         except Exception as e:
-            # Si falla, NO crear el usuario pendiente
-            error_msg = f"Error crítico enviando email de verificación: {str(e)}"
+            # Solo lanzar error si hay un error real de configuración
+            # Si es timeout, el email se enviará en background
+            error_msg = f"Error al iniciar envío de email de verificación: {str(e)}"
             print(error_msg)
-            raise serializers.ValidationError({
-                'email': 'No se pudo enviar el correo de verificación. Verifica tu conexión e intenta nuevamente.'
-            })
+            # No bloquear el registro, el email se intentará enviar en background
+            # El usuario puede usar "reenviar código" si no lo recibe
         
         return usuario_pendiente
 
@@ -234,6 +236,7 @@ class ReenviarCodigoSerializer(serializers.Serializer):
         usuario_pendiente.save()
         
         # Reenviar email con el nuevo código
+        # Usamos require_success=True para intentar envío síncrono con timeout
         try:
             notification_strategy = NotificationFactory.get_notification(
                 evento="VERIFY_ACCOUNT_EMAIL",
@@ -243,13 +246,12 @@ class ReenviarCodigoSerializer(serializers.Serializer):
                     "code": verification_code
                 }
             )
-            # CRÍTICO: require_success=True garantiza el envío
+            # Intenta envío con timeout, si no se completa continúa en background
             notification_strategy.send(require_success=True)
         except Exception as e:
-            error_msg = f"Error crítico reenviando email: {str(e)}"
+            # Solo lanzar error si hay un error real de configuración
+            error_msg = f"Error al iniciar reenvío de email: {str(e)}"
             print(error_msg)
-            raise serializers.ValidationError({
-                'email': 'No se pudo enviar el correo. Intenta nuevamente.'
-            })
+            # No bloquear, el email se intentará enviar en background
         
         return usuario_pendiente

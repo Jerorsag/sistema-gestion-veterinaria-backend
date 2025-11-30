@@ -12,14 +12,16 @@ class BaseNotification(ABC):
     Define el esqueleto del algoritmo ("cómo") para enviar una notificación.
     Su única responsabilidad es definir el algoritmo de envío.
     
-    Optimizado para:
-    - Emails críticos: Envío síncrono garantizado (verificación de cuenta)
+    Optimizado para Render:
+    - Emails críticos: Intento síncrono con timeout, fallback a asíncrono
     - Emails no críticos: Envío asíncrono para no bloquear requests
     """
     
     def __init__(self, context_data: dict, to_email: str):
         self.context_data = context_data
         self.to_email = to_email
+        self._email_sent = False
+        self._email_error = None
 
     @abstractmethod
     def get_subject(self) -> str:
@@ -39,7 +41,6 @@ class BaseNotification(ABC):
     def _send_email_sync(self, subject: str, message_body: str):
         """
         Método privado que envía el correo de forma síncrona.
-        Optimizado con timeouts cortos para SendGrid.
         """
         try:
             send_mail(
@@ -50,8 +51,10 @@ class BaseNotification(ABC):
                 html_message=message_body,
                 fail_silently=False,
             )
+            self._email_sent = True
             print(f"✅ Correo '{subject}' enviado a {self.to_email}")
         except Exception as e:
+            self._email_error = e
             error_msg = f"❌ Error enviando '{subject}' a {self.to_email}: {e}"
             print(error_msg)
             raise
@@ -59,26 +62,56 @@ class BaseNotification(ABC):
     def send(self, require_success: bool = False):
         """
         El "Template Method": El algoritmo principal e invariable.
-        Construye y envía el email de forma optimizada.
+        Construye y envía el email de forma optimizada para Render.
         
         Args:
-            require_success: Si es True, envía síncrono (garantizado para emails críticos).
-                           Si es False, envía asíncrono (no bloquea para emails no críticos).
+            require_success: Si es True, intenta síncrono con timeout corto, 
+                           luego fallback a asíncrono si no se completa.
+                           Si es False, envía asíncrono directamente.
         
-        Estrategia:
-        - Emails críticos (verificación): Síncrono para garantizar envío
-        - Emails no críticos (notificaciones): Asíncrono para mejor performance
+        Estrategia para Render:
+        - Emails críticos: Intento síncrono con timeout (5s), si no se completa
+          lanza thread asíncrono y responde al usuario (el email se enviará en background)
+        - Emails no críticos: Asíncrono directo
         """
         subject = self.get_subject()
         message_body = self.build_message_body()
         
-        # Para emails críticos (verificación de cuenta), usar modo síncrono
-        # Esto garantiza que el email se envíe antes de responder al usuario
+        # Para emails críticos, intentar síncrono con timeout corto
         if require_success:
-            self._send_email_sync(subject, message_body)
-            return
+            print(f"📧 Intentando envío síncrono de correo crítico '{subject}' a {self.to_email}...")
+            
+            # Crear thread para el envío
+            email_thread = threading.Thread(
+                target=self._send_email_sync,
+                args=(subject, message_body),
+                daemon=False,  # NO daemon para que no se interrumpa
+                name=f"CriticalEmail-{subject[:15]}"
+            )
+            email_thread.start()
+            
+            # Esperar máximo 5 segundos (suficiente para SendGrid)
+            email_thread.join(timeout=5)
+            
+            if email_thread.is_alive():
+                # El envío aún está en proceso, pero no esperamos más
+                # El thread continuará en background y el email se enviará
+                print(f"⏳ Envío de correo crítico '{subject}' en proceso (background)...")
+                # No lanzamos error, el email se enviará en background
+                return
+            elif self._email_sent:
+                # El email se envió exitosamente
+                print(f"✅ Correo crítico '{subject}' enviado exitosamente")
+                return
+            elif self._email_error:
+                # Hubo un error, lanzarlo
+                raise self._email_error
+            else:
+                # Timeout pero no sabemos el estado, asumir que se está enviando
+                print(f"⏳ Envío de correo crítico '{subject}' en proceso (timeout)...")
+                return
         
-        # Para emails no críticos, usar modo asíncrono (no bloquea la respuesta)
+        # Para emails no críticos, usar modo asíncrono directo
         use_async = os.getenv('USE_ASYNC_EMAIL', 'True').lower() == 'true'
         
         if use_async:
