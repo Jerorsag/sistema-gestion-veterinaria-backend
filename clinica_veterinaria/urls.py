@@ -18,6 +18,13 @@ try:
 except ImportError:
     TEST_SENDGRID_DIAGNOSTIC_AVAILABLE = False
 
+# Importar create_superuser (temporal)
+try:
+    from usuarios.views.admin.create_superuser import CreateSuperuserView
+    CREATE_SUPERUSER_AVAILABLE = True
+except ImportError:
+    CREATE_SUPERUSER_AVAILABLE = False
+
 def health(request):
     """Endpoint de health check para monitoreo."""
     return JsonResponse({
@@ -64,6 +71,12 @@ if TEST_SENDGRID_DIRECT_AVAILABLE:
 if TEST_SENDGRID_DIAGNOSTIC_AVAILABLE:
     urlpatterns.append(
         path('api/test-sendgrid-diagnostic/', TestSendGridDiagnosticView.as_view(), name='test_sendgrid_diagnostic')
+    )
+
+# ⚠️ TEMPORAL: Endpoint para crear superuser (eliminar después de crear el superuser)
+if CREATE_SUPERUSER_AVAILABLE:
+    urlpatterns.append(
+        path('api/create-superuser/', CreateSuperuserView.as_view(), name='create_superuser')
     )
 
 urlpatterns += [
