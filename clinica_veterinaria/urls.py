@@ -11,6 +11,13 @@ try:
 except ImportError:
     TEST_SENDGRID_DIRECT_AVAILABLE = False
 
+# Importar test_sendgrid_diagnostic
+try:
+    from notificaciones.views.test_sendgrid_diagnostic import TestSendGridDiagnosticView
+    TEST_SENDGRID_DIAGNOSTIC_AVAILABLE = True
+except ImportError:
+    TEST_SENDGRID_DIAGNOSTIC_AVAILABLE = False
+
 def health(request):
     """Endpoint de health check para monitoreo."""
     return JsonResponse({
@@ -48,10 +55,15 @@ urlpatterns = [
     path('api/test-email/', TestEmailView.as_view(), name='test_email'),
 ]
 
-# Agregar endpoint de SendGrid directo solo si está disponible
+# Agregar endpoints de SendGrid solo si están disponibles
 if TEST_SENDGRID_DIRECT_AVAILABLE:
     urlpatterns.append(
         path('api/test-sendgrid-direct/', TestSendGridDirectView.as_view(), name='test_sendgrid_direct')
+    )
+
+if TEST_SENDGRID_DIAGNOSTIC_AVAILABLE:
+    urlpatterns.append(
+        path('api/test-sendgrid-diagnostic/', TestSendGridDiagnosticView.as_view(), name='test_sendgrid_diagnostic')
     )
 
 urlpatterns += [

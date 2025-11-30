@@ -35,13 +35,23 @@ class TestSendGridDirectView(APIView):
                     'error': 'SENDGRID_API_KEY no está configurado'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
-            api_key = api_key.strip()
+            # Limpiar el API Key completamente (igual que en el backend)
+            api_key = str(api_key).strip()
+            # Eliminar comillas si están al inicio/final
+            if (api_key.startswith('"') and api_key.endswith('"')) or \
+               (api_key.startswith("'") and api_key.endswith("'")):
+                api_key = api_key[1:-1].strip()
+            # Eliminar saltos de línea y espacios múltiples
+            api_key = api_key.replace('\n', '').replace('\r', '').replace('\t', '')
+            while '  ' in api_key:
+                api_key = api_key.replace('  ', ' ')
             
             # Log del API Key (parcial)
             api_key_preview = api_key[:10] + "..." + api_key[-5:] if len(api_key) > 15 else "***"
             print(f"📧 Usando API Key: {api_key_preview}")
             print(f"📧 Longitud: {len(api_key)} caracteres")
             print(f"📧 Empieza con: {api_key[:3]}")
+            print(f"📧 Termina con: ...{api_key[-3:]}")
             
             # Crear cliente SendGrid (siguiendo documentación oficial)
             sg = SendGridAPIClient(api_key)
@@ -99,17 +109,57 @@ class TestSendGridDirectView(APIView):
                 'traceback': traceback.format_exc()
             }
             
+            # Diagnóstico específico para error 401
+            diagnostic_info = {}
+            if '401' in str(e) or 'Unauthorized' in str(e):
+                diagnostic_info = {
+                    'possible_causes': [
+                        'El API Key no tiene permisos de "Mail Send"',
+                        'El email remitente no está verificado en SendGrid',
+                        'El API Key está incorrecto o ha sido revocado',
+                        'El API Key no tiene acceso completo (Full Access)'
+                    ],
+                    'steps_to_fix': [
+                        '1. Ve a SendGrid Dashboard > Settings > API Keys',
+                        '2. Verifica que tu API Key tenga permisos "Mail Send" o "Full Access"',
+                        '3. Ve a Settings > Sender Authentication',
+                        '4. Verifica que el email "sgvnotificaciones15@gmail.com" esté verificado',
+                        '5. Si no está verificado, haz clic en "Verify a Single Sender"',
+                        '6. Revisa tu email y confirma la verificación',
+                        '7. Si el problema persiste, crea un nuevo API Key con "Full Access"'
+                    ],
+                    'api_key_info': {
+                        'preview': api_key_preview if 'api_key_preview' in locals() else 'N/A',
+                        'length': len(api_key) if 'api_key' in locals() else 0,
+                        'starts_with': api_key[:3] if 'api_key' in locals() and len(api_key) >= 3 else 'N/A'
+                    },
+                    'from_email': from_email if 'from_email' in locals() else 'N/A'
+                }
+            
             print("=" * 50)
             print("TEST SENDGRID DIRECT - ERROR:")
             print(f"  Error: {str(e)}")
             print(f"  Tipo: {type(e).__name__}")
+            if diagnostic_info:
+                print("\n🔍 DIAGNÓSTICO 401:")
+                print("   Posibles causas:")
+                for cause in diagnostic_info.get('possible_causes', []):
+                    print(f"   - {cause}")
+                print("\n   Pasos para resolver:")
+                for step in diagnostic_info.get('steps_to_fix', []):
+                    print(f"   {step}")
             print("  Traceback:")
             print(traceback.format_exc())
             print("=" * 50)
             
-            return Response({
+            response_data = {
                 'success': False,
                 'message': 'Error al enviar email',
                 'details': error_details
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            }
+            
+            if diagnostic_info:
+                response_data['diagnostic'] = diagnostic_info
+            
+            return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

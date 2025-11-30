@@ -28,9 +28,21 @@ class SendGridBackend(BaseEmailBackend):
             os.getenv('EMAIL_HOST_PASSWORD')
         )
         
-        # Limpiar el API Key (eliminar espacios)
+        # Limpiar el API Key completamente (eliminar espacios, saltos de línea, comillas, etc.)
         if self.api_key:
+            # Convertir a string si no lo es
+            self.api_key = str(self.api_key)
+            # Eliminar espacios al inicio y final
             self.api_key = self.api_key.strip()
+            # Eliminar comillas simples o dobles si están al inicio/final
+            if (self.api_key.startswith('"') and self.api_key.endswith('"')) or \
+               (self.api_key.startswith("'") and self.api_key.endswith("'")):
+                self.api_key = self.api_key[1:-1].strip()
+            # Eliminar saltos de línea y espacios múltiples
+            self.api_key = self.api_key.replace('\n', '').replace('\r', '').replace('\t', '')
+            # Eliminar espacios múltiples
+            while '  ' in self.api_key:
+                self.api_key = self.api_key.replace('  ', ' ')
         
         # Log para debugging (sin mostrar el API Key completo)
         if self.api_key:
@@ -38,6 +50,10 @@ class SendGridBackend(BaseEmailBackend):
             logger.info(f"📧 SendGrid API Key configurado: {api_key_preview}")
             logger.info(f"📧 Longitud del API Key: {len(self.api_key)} caracteres")
             logger.info(f"📧 API Key empieza con: {self.api_key[:3] if len(self.api_key) >= 3 else 'N/A'}")
+            logger.info(f"📧 API Key termina con: ...{self.api_key[-3:] if len(self.api_key) >= 3 else 'N/A'}")
+            # Verificar si hay caracteres problemáticos
+            if any(char in self.api_key for char in ['\n', '\r', '\t', '  ']):
+                logger.warning(f"⚠️ El API Key contiene caracteres problemáticos (espacios, saltos de línea)")
         else:
             logger.error("❌ SENDGRID_API_KEY no está configurado")
         
@@ -70,7 +86,7 @@ class SendGridBackend(BaseEmailBackend):
                 subject = message.subject
                 
                 # Parsear from_email si viene en formato "Nombre <email@example.com>"
-                # SendGrid requiere que el email esté verificado, así que usamos solo el email
+                # SendGrid requiere que el email esté verificado
                 import re
                 if '<' in from_email_raw and '>' in from_email_raw:
                     # Formato: "Nombre <email@example.com>"
@@ -78,9 +94,10 @@ class SendGridBackend(BaseEmailBackend):
                     if match:
                         from_name = match.group(1).strip()
                         from_email = match.group(2).strip()
-                        # Usar Email object con nombre y email
-                        from_email_obj = Email(from_email, from_name)
-                        logger.info(f"📧 From email parseado: {from_name} <{from_email}>")
+                        # IMPORTANTE: SendGrid requiere que el email esté verificado
+                        # Usamos solo el email (sin nombre) para evitar problemas con 401
+                        from_email_obj = from_email
+                        logger.info(f"📧 From email parseado: {from_name} <{from_email}> (usando solo email)")
                     else:
                         # Si no se puede parsear, usar solo el email
                         from_email_obj = from_email_raw
