@@ -24,6 +24,7 @@ class TestEmailView(APIView):
             # Verificar configuración
             config_info = {
                 'EMAIL_BACKEND': str(settings.EMAIL_BACKEND),
+                'SENDGRID_API_KEY': '***SET***' if getattr(settings, 'SENDGRID_API_KEY', None) else 'NOT SET',
                 'EMAIL_HOST': getattr(settings, 'EMAIL_HOST', 'NOT SET'),
                 'EMAIL_PORT': getattr(settings, 'EMAIL_PORT', 'NOT SET'),
                 'EMAIL_USE_TLS': getattr(settings, 'EMAIL_USE_TLS', 'NOT SET'),

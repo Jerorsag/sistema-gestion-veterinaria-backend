@@ -44,10 +44,14 @@ class BaseNotification(ABC):
         """
         try:
             # Log de configuración para debugging
-            print(f"📧 Configuración SMTP:")
-            print(f"   EMAIL_HOST: {getattr(settings, 'EMAIL_HOST', 'NOT SET')}")
-            print(f"   EMAIL_PORT: {getattr(settings, 'EMAIL_PORT', 'NOT SET')}")
-            print(f"   EMAIL_HOST_USER: {getattr(settings, 'EMAIL_HOST_USER', 'NOT SET')}")
+            email_backend = getattr(settings, 'EMAIL_BACKEND', 'NOT SET')
+            print(f"📧 Configuración de Email:")
+            print(f"   EMAIL_BACKEND: {email_backend}")
+            if 'sendgrid' in str(email_backend).lower():
+                print(f"   SENDGRID_API_KEY: {'***SET***' if getattr(settings, 'SENDGRID_API_KEY', None) else 'NOT SET'}")
+            else:
+                print(f"   EMAIL_HOST: {getattr(settings, 'EMAIL_HOST', 'NOT SET')}")
+                print(f"   EMAIL_PORT: {getattr(settings, 'EMAIL_PORT', 'NOT SET')}")
             print(f"   DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', 'NOT SET')}")
             print(f"   Enviando a: {self.to_email}")
             

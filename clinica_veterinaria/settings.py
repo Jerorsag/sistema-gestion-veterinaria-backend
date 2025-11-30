@@ -172,9 +172,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# --- CONFIGURACIÓN DE ENVÍO DE CORREO (SMTP) ---
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -233,10 +230,22 @@ SPECTACULAR_SETTINGS = {
     'TAGS_SORTER': 'alpha',
 }
 
-# --- CONFIGURACIÓN DE ENVÍO DE CORREO (SMTP) ---
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+# --- CONFIGURACIÓN DE ENVÍO DE CORREO ---
+# Usar SendGrid API REST en lugar de SMTP (más confiable en Render, no bloqueado)
+# Si SENDGRID_API_KEY está configurado, usar API REST
+# Si no, usar SMTP (para desarrollo local)
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY') or os.getenv('EMAIL_HOST_PASSWORD')
 
-# Configuración SMTP (SendGrid en producción, Gmail en desarrollo local)
+if SENDGRID_API_KEY:
+    # Usar API REST de SendGrid (más confiable, no bloqueado por Render)
+    EMAIL_BACKEND = 'notificaciones.backends.sendgrid_backend.SendGridBackend'
+    print("📧 Usando SendGrid API REST para envío de emails")
+else:
+    # Fallback a SMTP (para desarrollo local)
+    EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+    print("📧 Usando SMTP para envío de emails")
+
+# Configuración SMTP (solo para desarrollo local o si no se usa SendGrid API)
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
@@ -244,8 +253,7 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
-# Timeout optimizado para SendGrid (conexión rápida)
-# 10 segundos es suficiente para SendGrid, evita timeouts largos
+# Timeout optimizado (solo para SMTP)
 EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '10'))
 
 # URL del frontend (para enlaces en emails)
