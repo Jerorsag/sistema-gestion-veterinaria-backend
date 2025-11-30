@@ -27,7 +27,6 @@ __pycache__/
 Thumbs.db
 
 # --- Archivos de migraciones ---
-*/migrations/*
 !*/migrations/__init__.py
 
 # --- Archivos de base de datos locales ---
