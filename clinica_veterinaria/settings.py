@@ -234,19 +234,19 @@ SPECTACULAR_SETTINGS = {
 }
 
 # --- CONFIGURACIÓN DE ENVÍO DE CORREO (SMTP) ---
-# La dirección del "buzón" de Gmail
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+
+# Configuración SMTP (SendGrid en producción, Gmail en desarrollo local)
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-# El puerto de comunicación (587 es el estándar para TLS)
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
-# Le decimos que la conexión debe ser encriptada (Segura)
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True' # Convertimos string a Boolean
-
-
-# Leemos el usuario y la contraseña desde nuestro archivo .env
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-# El nombre que verá el cliente cuando reciba el correo
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
+# Timeout optimizado para SendGrid (conexión rápida)
+# 10 segundos es suficiente para SendGrid, evita timeouts largos
+EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '10'))
 
 # URL del frontend (para enlaces en emails)
 # En desarrollo: http://localhost:5173 (Vite)
