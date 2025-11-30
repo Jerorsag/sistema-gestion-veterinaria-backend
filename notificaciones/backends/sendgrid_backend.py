@@ -7,6 +7,7 @@ from django.conf import settings
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Email, Content
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +19,38 @@ class SendGridBackend(BaseEmailBackend):
     
     def __init__(self, fail_silently=False, **kwargs):
         super().__init__(fail_silently=fail_silently, **kwargs)
-        self.api_key = getattr(settings, 'SENDGRID_API_KEY', None) or getattr(settings, 'EMAIL_HOST_PASSWORD', None)
+        
+        # Intentar obtener el API Key de múltiples fuentes
+        self.api_key = (
+            getattr(settings, 'SENDGRID_API_KEY', None) or 
+            getattr(settings, 'EMAIL_HOST_PASSWORD', None) or
+            os.getenv('SENDGRID_API_KEY') or
+            os.getenv('EMAIL_HOST_PASSWORD')
+        )
+        
+        # Limpiar el API Key (eliminar espacios)
+        if self.api_key:
+            self.api_key = self.api_key.strip()
+        
+        # Log para debugging (sin mostrar el API Key completo)
+        if self.api_key:
+            api_key_preview = self.api_key[:10] + "..." + self.api_key[-5:] if len(self.api_key) > 15 else "***"
+            logger.info(f"📧 SendGrid API Key configurado: {api_key_preview}")
+            logger.info(f"📧 Longitud del API Key: {len(self.api_key)} caracteres")
+            logger.info(f"📧 API Key empieza con: {self.api_key[:3] if len(self.api_key) >= 3 else 'N/A'}")
+        else:
+            logger.error("❌ SENDGRID_API_KEY no está configurado")
         
         if not self.api_key:
             raise ValueError(
                 'SENDGRID_API_KEY o EMAIL_HOST_PASSWORD debe estar configurado '
-                'para usar SendGridBackend'
+                'para usar SendGridBackend. Verifica las variables de entorno en Render.'
             )
+        
+        # Verificar que el API Key tenga el formato correcto (debe empezar con SG.)
+        if not self.api_key.startswith('SG.'):
+            logger.warning(f"⚠️ El API Key no parece tener el formato correcto (debe empezar con 'SG.')")
+            logger.warning(f"⚠️ Primeros caracteres: {self.api_key[:10]}")
         
         self.client = SendGridAPIClient(self.api_key)
     
@@ -93,6 +119,15 @@ class SendGridBackend(BaseEmailBackend):
             except Exception as e:
                 error_msg = f"❌ Error enviando email via SendGrid API: {str(e)}"
                 logger.error(error_msg, exc_info=True)
+                
+                # Si es error 401, dar información más específica
+                if '401' in str(e) or 'Unauthorized' in str(e):
+                    api_key_preview = self.api_key[:10] + "..." + self.api_key[-5:] if len(self.api_key) > 15 else "***"
+                    logger.error(f"❌ Error 401: El API Key puede ser incorrecto o no tener permisos")
+                    logger.error(f"❌ API Key usado: {api_key_preview}")
+                    logger.error(f"❌ Verifica que SENDGRID_API_KEY en Render Dashboard sea correcto")
+                    logger.error(f"❌ Verifica que el API Key tenga permisos 'Mail Send' en SendGrid")
+                
                 if not self.fail_silently:
                     raise
         
