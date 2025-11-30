@@ -103,10 +103,15 @@ class RegistroPendienteSerializer(serializers.ModelSerializer):
                     "code": verification_code
                 }
             )
-            notification_strategy.send()
+            # CRÍTICO: require_success=True garantiza el envío antes de responder
+            notification_strategy.send(require_success=True)
         except Exception as e:
-            # Log del error pero no bloquear el registro
-            print(f"Error al enviar email de verificación: {str(e)}")
+            # Si falla, NO crear el usuario pendiente
+            error_msg = f"Error crítico enviando email de verificación: {str(e)}"
+            print(error_msg)
+            raise serializers.ValidationError({
+                'email': 'No se pudo enviar el correo de verificación. Verifica tu conexión e intenta nuevamente.'
+            })
         
         return usuario_pendiente
 
@@ -238,8 +243,13 @@ class ReenviarCodigoSerializer(serializers.Serializer):
                     "code": verification_code
                 }
             )
-            notification_strategy.send()
+            # CRÍTICO: require_success=True garantiza el envío
+            notification_strategy.send(require_success=True)
         except Exception as e:
-            print(f"Error al reenviar email: {str(e)}")
+            error_msg = f"Error crítico reenviando email: {str(e)}"
+            print(error_msg)
+            raise serializers.ValidationError({
+                'email': 'No se pudo enviar el correo. Intenta nuevamente.'
+            })
         
         return usuario_pendiente
