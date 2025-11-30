@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from notificaciones.views.test_email import TestEmailView
 
 def health(request):
     """Endpoint de health check para monitoreo."""
@@ -35,6 +36,9 @@ urlpatterns = [
 
     # Health check
     path('api/health/', health, name='health'),
+    
+    # ⚠️ TEMPORAL: Endpoint de prueba de email (eliminar después)
+    path('api/test-email/', TestEmailView.as_view(), name='test_email'),
 
     # API v1
     path('api/v1/', include('usuarios.urls')),
