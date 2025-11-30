@@ -3,7 +3,13 @@ from django.http import JsonResponse
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from notificaciones.views.test_email import TestEmailView
-from notificaciones.views.test_sendgrid_direct import TestSendGridDirectView
+
+# Importar test_sendgrid_direct solo si existe
+try:
+    from notificaciones.views.test_sendgrid_direct import TestSendGridDirectView
+    TEST_SENDGRID_DIRECT_AVAILABLE = True
+except ImportError:
+    TEST_SENDGRID_DIRECT_AVAILABLE = False
 
 def health(request):
     """Endpoint de health check para monitoreo."""
@@ -40,8 +46,15 @@ urlpatterns = [
     
     # ⚠️ TEMPORAL: Endpoints de prueba de email (eliminar después)
     path('api/test-email/', TestEmailView.as_view(), name='test_email'),
-    path('api/test-sendgrid-direct/', TestSendGridDirectView.as_view(), name='test_sendgrid_direct'),
+]
 
+# Agregar endpoint de SendGrid directo solo si está disponible
+if TEST_SENDGRID_DIRECT_AVAILABLE:
+    urlpatterns.append(
+        path('api/test-sendgrid-direct/', TestSendGridDirectView.as_view(), name='test_sendgrid_direct')
+    )
+
+urlpatterns += [
     # API v1
     path('api/v1/', include('usuarios.urls')),
     path('api/v1/', include('mascotas.urls')),
